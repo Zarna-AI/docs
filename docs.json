@@ -213,7 +213,7 @@
         },
         {
           "anchor": "GitHub",
-          "href": "https://github.com/zarna",
+          "href": "https://github.com/Zarna-AI",
           "icon": "github"
         }
       ]
@@ -227,13 +227,13 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:support@zarna.com"
+        "href": "mailto:contact@zarna.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://app.zarna.com"
+      "href": "https://demo.usezarnaai.com"
     }
   },
   "contextual": {
@@ -250,8 +250,8 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/zarna",
-      "linkedin": "https://linkedin.com/company/zarna"
+      "github": "https://github.com/Zarna-AI",
+      "linkedin": "https://www.linkedin.com/company/zarna"
     }
   }
 }
