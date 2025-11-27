@@ -1,0 +1,506 @@
+---
+title: "Theme System"
+description: "OKLCH-based color system with dark/light mode support"
+---
+
+## Overview
+
+Zarna uses a sophisticated theme system built on **CSS Variables** and the **OKLCH color space** for better perceptual uniformity and dark mode support.
+
+## Color System
+
+### Why OKLCH?
+
+OKLCH (Oklab with Lightness, Chroma, and Hue) provides several advantages over traditional RGB/HSL:
+
+- **Perceptual uniformity**: Colors appear equally bright at the same lightness value
+- **Better gradients**: Smooth color transitions without muddy midpoints
+- **Predictable manipulation**: Adjusting lightness creates natural color variations
+- **Wide gamut**: Supports P3 displays for richer colors
+
+### Color Structure
+
+All colors are defined as CSS custom properties in `src/index.css`:
+
+```css
+:root {
+  /* Light theme colors */
+  --background: oklch(1 0 0);                     /* White */
+  --foreground: oklch(0.129 0.042 264.695);       /* Near black */
+  --primary: oklch(0.208 0.042 265.755);          /* Brand color */
+  --primary-foreground: oklch(0.984 0.003 247.858); /* Text on primary */
+  --secondary: oklch(0.956 0.005 286.375);         /* Secondary actions */
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.956 0.005 286.375);             /* Muted backgrounds */
+  --muted-foreground: oklch(0.559 0.015 286.067);  /* Muted text */
+  --accent: oklch(0.956 0.005 286.375);            /* Accents */
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.576 0.215 27.325);        /* Red for destructive actions */
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.921 0.013 286.514);            /* Borders */
+  --input: oklch(0.921 0.013 286.514);             /* Input borders */
+  --ring: oklch(0.208 0.042 265.755);              /* Focus rings */
+  --card: oklch(1 0 0);                            /* Card backgrounds */
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);                         /* Popover backgrounds */
+  --popover-foreground: oklch(0.129 0.042 264.695);
+}
+
+.dark {
+  /* Dark theme colors */
+  --background: oklch(0.129 0.042 264.695);        /* Near black */
+  --foreground: oklch(0.984 0.003 247.858);        /* Near white */
+  --primary: oklch(0.984 0.003 247.858);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.208 0.042 265.755);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  /* ... */
+}
+```
+
+## Color Tokens
+
+### Semantic Color Usage
+
+<CardGroup cols={2}>
+  <Card title="background" icon="square">
+    Page background color
+    ```tsx
+    <div className="bg-background" />
+    ```
+  </Card>
+
+  <Card title="foreground" icon="font">
+    Primary text color
+    ```tsx
+    <p className="text-foreground" />
+    ```
+  </Card>
+
+  <Card title="primary" icon="star">
+    Brand color for CTAs
+    ```tsx
+    <Button className="bg-primary text-primary-foreground" />
+    ```
+  </Card>
+
+  <Card title="secondary" icon="circle">
+    Secondary actions
+    ```tsx
+    <Button variant="secondary" />
+    ```
+  </Card>
+
+  <Card title="muted" icon="eye-slash">
+    Subtle backgrounds and muted text
+    ```tsx
+    <div className="bg-muted text-muted-foreground" />
+    ```
+  </Card>
+
+  <Card title="accent" icon="sparkles">
+    Highlight and emphasis
+    ```tsx
+    <div className="bg-accent text-accent-foreground" />
+    ```
+  </Card>
+
+  <Card title="destructive" icon="trash">
+    Dangerous actions (delete, remove)
+    ```tsx
+    <Button variant="destructive" />
+    ```
+  </Card>
+
+  <Card title="border" icon="minus">
+    All borders
+    ```tsx
+    <div className="border border-border" />
+    ```
+  </Card>
+
+  <Card title="input" icon="text-input">
+    Input field borders
+    ```tsx
+    <Input className="border-input" />
+    ```
+  </Card>
+
+  <Card title="ring" icon="circle-dot">
+    Focus indicators
+    ```tsx
+    <Button className="focus:ring-ring" />
+    ```
+  </Card>
+
+  <Card title="card" icon="rectangle">
+    Card backgrounds
+    ```tsx
+    <Card className="bg-card text-card-foreground" />
+    ```
+  </Card>
+
+  <Card title="popover" icon="window">
+    Popover backgrounds
+    ```tsx
+    <Popover className="bg-popover text-popover-foreground" />
+    ```
+  </Card>
+</CardGroup>
+
+### Chart Colors
+
+For data visualization with Recharts:
+
+```css
+--chart-1: oklch(0.59 0.23 25.32);
+--chart-2: oklch(0.71 0.19 150.28);
+--chart-3: oklch(0.53 0.26 261.32);
+--chart-4: oklch(0.72 0.17 58.97);
+--chart-5: oklch(0.65 0.25 312.27);
+```
+
+**Usage**:
+```tsx
+<Line dataKey="revenue" stroke="hsl(var(--chart-1))" />
+<Line dataKey="profit" stroke="hsl(var(--chart-2))" />
+```
+
+## Border Radius System
+
+Consistent corner rounding throughout the app:
+
+```css
+--radius: 0.625rem;                        /* Base radius: 10px */
+--radius-sm: calc(var(--radius) - 4px);    /* Small: 6px */
+--radius-md: calc(var(--radius) - 2px);    /* Medium: 8px */
+--radius-lg: var(--radius);                /* Large: 10px */
+--radius-xl: calc(var(--radius) + 4px);    /* Extra large: 14px */
+```
+
+**Usage with Tailwind**:
+```tsx
+<div className="rounded-sm" />   {/* 6px */}
+<div className="rounded-md" />   {/* 8px */}
+<div className="rounded-lg" />   {/* 10px */}
+<div className="rounded-xl" />   {/* 14px */}
+```
+
+## Dark Mode
+
+### Implementation
+
+Dark mode is managed by `next-themes` with class-based switching:
+
+```tsx
+// app/layout.tsx or src/App.tsx
+import { ThemeProvider } from "next-themes"
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" suppressHydrationMismatch>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+        >
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+### Theme Toggle
+
+```tsx
+import { useTheme } from "next-themes"
+import { Moon, Sun } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+    >
+      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <span className="sr-only">Toggle theme</span>
+    </Button>
+  )
+}
+```
+
+### Dark Mode Classes
+
+Use the `dark:` prefix for dark mode styles:
+
+```tsx
+<div className="bg-white dark:bg-gray-900">
+  <h1 className="text-gray-900 dark:text-white">
+    Title
+  </h1>
+  <p className="text-gray-600 dark:text-gray-300">
+    Description
+  </p>
+</div>
+```
+
+## Changing the Color Palette
+
+### Method 1: Edit CSS Variables
+
+Directly modify `src/index.css`:
+
+```css
+:root {
+  --primary: oklch(0.5 0.2 200);  /* Blue */
+}
+
+.dark {
+  --primary: oklch(0.6 0.2 200);  /* Lighter blue for dark mode */
+}
+```
+
+### Method 2: Use Theme Generator
+
+1. Visit [ui.shadcn.com/themes](https://ui.shadcn.com/themes)
+2. Customize colors visually
+3. Copy generated CSS variables
+4. Paste into `src/index.css`
+
+### Method 3: Programmatic Generation
+
+```typescript
+// lib/generate-theme.ts
+export function oklchToHsl(l: number, c: number, h: number) {
+  // Conversion logic
+  return `${h} ${c * 100}% ${l * 100}%`
+}
+
+// Generate variations
+const primary = {
+  DEFAULT: oklchToHsl(0.5, 0.2, 200),
+  foreground: oklchToHsl(0.95, 0.01, 200)
+}
+```
+
+## Understanding OKLCH Values
+
+### Lightness (L)
+
+- **Range**: 0 to 1
+- **0**: Pure black
+- **0.5**: Medium brightness
+- **1**: Pure white
+
+### Chroma (C)
+
+- **Range**: 0 to 0.4 (typically)
+- **0**: Grayscale (no color)
+- **0.1**: Subtle color
+- **0.2**: Moderate saturation
+- **0.3+**: Vivid colors
+
+### Hue (H)
+
+- **Range**: 0 to 360 degrees
+- **0/360**: Red
+- **120**: Green
+- **240**: Blue
+- **60**: Yellow
+- **180**: Cyan
+- **300**: Magenta
+
+### Examples
+
+```css
+/* Red */
+oklch(0.6 0.25 25)
+
+/* Green */
+oklch(0.7 0.2 145)
+
+/* Blue */
+oklch(0.5 0.2 260)
+
+/* Gray (no chroma) */
+oklch(0.5 0 0)
+```
+
+## Tools
+
+### OKLCH Color Picker
+
+- [oklch.com](https://oklch.com) - Interactive color picker
+- Shows RGB fallbacks
+- P3 gamut visualization
+
+### Theme Testing
+
+Test your theme in both modes:
+
+```tsx
+// components/theme-test.tsx
+export function ThemeTest() {
+  return (
+    <div className="space-y-4 p-8">
+      <div className="bg-background border border-border p-4 rounded-lg">
+        <p className="text-foreground">Foreground text</p>
+        <p className="text-muted-foreground">Muted text</p>
+      </div>
+
+      <div className="bg-primary text-primary-foreground p-4 rounded-lg">
+        Primary
+      </div>
+
+      <div className="bg-secondary text-secondary-foreground p-4 rounded-lg">
+        Secondary
+      </div>
+
+      <div className="bg-destructive text-destructive-foreground p-4 rounded-lg">
+        Destructive
+      </div>
+
+      <div className="bg-accent text-accent-foreground p-4 rounded-lg">
+        Accent
+      </div>
+
+      <div className="bg-card text-card-foreground border border-border p-4 rounded-lg">
+        Card
+      </div>
+    </div>
+  )
+}
+```
+
+## Accessibility
+
+### Contrast Requirements
+
+Follow WCAG AA standards:
+
+- **Normal text**: 4.5:1 contrast ratio minimum
+- **Large text** (18pt+): 3:1 contrast ratio minimum
+- **UI components**: 3:1 contrast ratio minimum
+
+### Testing Contrast
+
+```typescript
+// Use browser devtools or tools like:
+// - Chrome DevTools (Lighthouse)
+// - axe DevTools
+// - Contrast Checker plugins
+```
+
+### Ensuring Accessibility
+
+1. **Always pair colors correctly**:
+   - `bg-primary` with `text-primary-foreground`
+   - `bg-card` with `text-card-foreground`
+
+2. **Test in both modes**:
+   - Light mode
+   - Dark mode
+
+3. **Don't rely on color alone**:
+   - Use icons
+   - Add text labels
+   - Include patterns
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use semantic color tokens">
+    ✅ `bg-primary` (theme-aware)
+    ❌ `bg-blue-500` (hardcoded)
+  </Accordion>
+
+  <Accordion title="Maintain color parity">
+    Every token in light mode should exist in dark mode
+  </Accordion>
+
+  <Accordion title="Test contrast ratios">
+    Verify WCAG AA compliance for all text colors
+  </Accordion>
+
+  <Accordion title="Use foreground pairs">
+    Always pair background colors with their foreground counterparts
+  </Accordion>
+
+  <Accordion title="Avoid color-only indicators">
+    Supplement color with icons, text, or patterns
+  </Accordion>
+</AccordionGroup>
+
+## Customization Examples
+
+### Brand Color Change
+
+```css
+/* Change primary brand color to purple */
+:root {
+  --primary: oklch(0.55 0.25 300);  /* Purple */
+  --primary-foreground: oklch(0.98 0.01 300);
+}
+
+.dark {
+  --primary: oklch(0.65 0.25 300);  /* Lighter purple for dark mode */
+  --primary-foreground: oklch(0.15 0.05 300);
+}
+```
+
+### Adding Custom Colors
+
+```css
+:root {
+  --success: oklch(0.65 0.2 145);
+  --success-foreground: oklch(0.98 0.01 145);
+  --warning: oklch(0.75 0.15 85);
+  --warning-foreground: oklch(0.15 0.05 85);
+}
+
+.dark {
+  --success: oklch(0.55 0.2 145);
+  --success-foreground: oklch(0.98 0.01 145);
+  --warning: oklch(0.65 0.15 85);
+  --warning-foreground: oklch(0.98 0.01 85);
+}
+```
+
+**Usage**:
+```tsx
+<div className="bg-[oklch(var(--success))] text-[oklch(var(--success-foreground))]">
+  Success message
+</div>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="puzzle-piece" href="/frontend/components">
+    Learn how components use the theme system
+  </Card>
+  <Card title="Best Practices" icon="star" href="/frontend/best-practices">
+    Follow coding standards for theming
+  </Card>
+  <Card title="Project Structure" icon="folder" href="/frontend/project-structure">
+    See where theme files are located
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/frontend/tech-stack">
+    Explore theming libraries
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [OKLCH Color Space](https://oklch.com)
+- [WCAG Contrast Guidelines](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)
+- [shadcn/ui Theming](https://ui.shadcn.com/docs/theming)
+- [next-themes Documentation](https://github.com/pacocoursey/next-themes)

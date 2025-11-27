@@ -1,0 +1,65 @@
+---
+title: "Notes API"
+description: "Notes and observations management"
+---
+
+## Overview
+
+The Notes API provides endpoints for creating and managing notes associated with companies, contacts, and deals.
+
+**Base Path**: `/api/notes`
+
+## Endpoints
+
+### Create Note
+
+```bash
+POST /api/notes
+```
+
+**Request Body**:
+
+```json
+{
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "Great conversation about partnership opportunities...",
+  "tags": ["partnership", "follow-up"],
+  "is_pinned": false
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "ll0e8400-e29b-41d4-a716-446655446666",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "Great conversation...",
+  "tags": ["partnership", "follow-up"],
+  "created_by": "user-uuid",
+  "created_at": "2024-01-22T14:30:00Z"
+}
+```
+
+### List Notes
+
+```bash
+GET /api/notes?company_id={company_id}
+```
+
+### Search Notes
+
+```bash
+GET /api/notes/search?q={query}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Company management
+  </Card>
+  <Card title="Interactions API" icon="comments" href="/api-reference/interactions">
+    Track interactions
+  </Card>
+</CardGroup>

@@ -1,0 +1,473 @@
+---
+title: "Backend Overview"
+description: "FastAPI Python backend with 25+ routers and AI services"
+---
+
+## Introduction
+
+The Zarna backend is a modern FastAPI application providing a comprehensive REST API for CRM operations, document processing, AI-powered analysis, and external integrations. The backend powers all Zarna features, including the Zarna AI chatbot.
+
+## Technology Stack
+
+- **FastAPI** - Modern, high-performance web framework
+- **Python 3.8+** - Language runtime
+- **Uvicorn** - ASGI server with auto-reload
+- **Pydantic** - Data validation using Python type hints
+- **Supabase** - PostgreSQL database client
+- **Anthropic Claude** - AI-powered analysis
+- **Docling** - Advanced document processing
+- **AutoGen** - Multi-agent AI orchestration
+
+<Card title="Full Tech Stack" icon="layer-group" href="/backend/tech-stack">
+  See the complete list of backend technologies
+</Card>
+
+## Architecture
+
+### Main Application
+
+**Location**: `api/app/main.py`
+
+The application entry point configures FastAPI with:
+
+```python
+app = FastAPI(
+    title="Zarna API",
+    description="API for Zarna application",
+    version="0.1.0"
+)
+```
+
+**Key Features**:
+- **OpenAPI Documentation**: Auto-generated at `/docs` and `/redoc`
+- **CORS Middleware**: Configured for `localhost:3000`, `localhost:3001`, `localhost:8000`
+- **JWT Authentication**: Middleware for protected routes
+- **Exception Handling**: Custom handlers for clean error responses
+- **Startup/Shutdown Events**: Agent pool initialization and cleanup
+
+### Project Structure
+
+```
+zarna-backend/
+├── api/                          # FastAPI application
+│   ├── app/
+│   │   ├── main.py              # Application entry point
+│   │   ├── routers/             # API endpoints (25+ routers)
+│   │   ├── middleware/          # JWT auth, CORS
+│   │   └── auth/                # Authentication logic
+│   ├── run.py                   # Development server
+│   └── run_prod.py              # Production server
+│
+├── scripts/                      # Business logic (145+ files)
+│   ├── agentic_chat/            # Multi-agent chat system
+│   ├── batched_cim_service.py   # Batch CIM processing
+│   ├── crm_agent.py             # AI-powered CRM operations
+│   ├── email_agent_microservice/ # Email automation
+│   ├── enhanced_extraction_service.py
+│   └── ...                      # Many more services
+│
+├── requirements.txt              # Python dependencies
+└── .env                         # Environment variables
+```
+
+## API Routers
+
+The backend has **25+ routers** organized by domain:
+
+### CRM Routers
+
+<CardGroup cols={2}>
+  <Card title="Companies" icon="building" href="/api-reference/companies">
+    Company CRUD operations, search, filtering
+  </Card>
+  <Card title="Contacts" icon="user" href="/api-reference/contacts">
+    Contact management and relationships
+  </Card>
+  <Card title="Deals" icon="handshake" href="/api-reference/deals">
+    Deal pipeline, stages, workflows
+  </Card>
+  <Card title="Interactions" icon="comments" href="/api-reference/interactions">
+    Meetings, calls, notes tracking
+  </Card>
+  <Card title="Financials" icon="dollar-sign" href="/api-reference/financials">
+    Financial records and metrics
+  </Card>
+  <Card title="Notes" icon="note-sticky" href="/api-reference/notes">
+    Notes management and search
+  </Card>
+</CardGroup>
+
+### File Management Routers
+
+<CardGroup cols={2}>
+  <Card title="Files" icon="file" href="/api-reference/files">
+    Upload, process, extract documents
+  </Card>
+  <Card title="Google Drive" icon="google" href="/api-reference/drive">
+    Drive sync and file operations
+  </Card>
+  <Card title="SharePoint" icon="microsoft" href="/api-reference/sharepoint">
+    SharePoint integration
+  </Card>
+  <Card title="Egnyte" icon="cloud" href="/api-reference/egnyte">
+    Egnyte file management
+  </Card>
+  <Card title="Basecamp" icon="circle-nodes" href="/api-reference/basecamp">
+    Basecamp project integration
+  </Card>
+</CardGroup>
+
+### Communication Routers
+
+<CardGroup cols={2}>
+  <Card title="Emails" icon="envelope" href="/api-reference/emails">
+    Email tracking and history
+  </Card>
+  <Card title="Email Bot" icon="robot" href="/api-reference/email-bot">
+    Automated email handling
+  </Card>
+  <Card title="Calendar" icon="calendar" href="/api-reference/calendar">
+    Google Calendar integration
+  </Card>
+</CardGroup>
+
+### AI & Analytics Routers
+
+<CardGroup cols={2}>
+  <Card title="Reports" icon="file-chart-column" href="/api-reference/reports">
+    AI-powered report generation
+  </Card>
+  <Card title="Sourcing" icon="magnifying-glass" href="/api-reference/sourcing">
+    AI company sourcing with Exa
+  </Card>
+  <Card title="Agentic Chat" icon="messages" href="/api-reference/agentic-chat">
+    Multi-agent AI chat system
+  </Card>
+</CardGroup>
+
+### Management Routers
+
+<CardGroup cols={2}>
+  <Card title="Users" icon="users" href="/api-reference/users">
+    User management operations
+  </Card>
+  <Card title="Firms" icon="briefcase" href="/api-reference/firms">
+    Firm management
+  </Card>
+  <Card title="Prompts" icon="wand-magic-sparkles" href="/api-reference/prompts">
+    AI prompt operations
+  </Card>
+  <Card title="Staffing" icon="user-group" href="/api-reference/staffing">
+    Team staffing management
+  </Card>
+  <Card title="Utilities" icon="wrench" href="/api-reference/utilities">
+    Utility endpoints
+  </Card>
+  <Card title="Chat History" icon="clock-rotate-left" href="/api-reference/chat-history">
+    Chat conversation history
+  </Card>
+</CardGroup>
+
+## Core Services
+
+The backend includes several major services in the `scripts/` directory:
+
+### CRM Agent
+
+**File**: `scripts/crm_agent.py`
+**Size**: 51KB
+
+AI-powered CRM operations that understand natural language queries.
+
+<Card title="Learn More" icon="robot" href="/backend/services/crm-agent">
+  Explore the CRM agent service
+</Card>
+
+### Document Processing
+
+**Files**: Multiple services for document extraction
+- `enhanced_extraction_service.py` - Main extraction service
+- `batched_cim_service.py` - Batch CIM processing
+- `cim_analysis_service.py` - CIM analysis
+
+<Card title="Learn More" icon="file-lines" href="/backend/services/document-processing">
+  Understand document processing
+</Card>
+
+### Email Agent
+
+**Directory**: `scripts/email_agent_microservice/`
+
+Automated email handling with Gmail/Outlook integration.
+
+<Card title="Learn More" icon="envelope" href="/backend/services/email-agent">
+  Explore the email agent
+</Card>
+
+### Report Generation
+
+**Files**: Report generation services with streaming
+
+AI-powered report generation with real-time streaming to frontend.
+
+<Card title="Learn More" icon="chart-line" href="/backend/services/report-generation">
+  See report generation service
+</Card>
+
+### Agentic Chat
+
+**Directory**: `scripts/agentic_chat/`
+**Files**: Agent pool, orchestrator, tools
+
+Multi-agent system with pool manager for performance.
+
+<Card title="Learn More" icon="users" href="/backend/services/agentic-chat">
+  Dive into the agentic system
+</Card>
+
+## Authentication & Security
+
+### JWT Authentication
+
+**Middleware**: `api/app/middleware/JWTAuthMiddleware`
+
+All routes are protected by JWT authentication:
+
+```python
+# Protected endpoint example
+@router.get("/companies")
+async def get_companies(current_user: User = Depends(get_current_user)):
+    # Only authenticated users can access
+    return companies
+```
+
+### Environment Variables
+
+Required variables in `.env`:
+
+```bash
+# Database
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+SUPABASE_JWT_SECRET=your-jwt-secret
+
+# AI Services
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+OPENAI_API_KEY=sk-xxxxx
+
+# OAuth (Composio)
+COMPOSIO_API_KEY=your-key
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-config
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-config
+
+# Search
+EXA_API_KEY=your-exa-key
+
+# Server
+PORT=8000
+HOST=0.0.0.0
+```
+
+<Card title="Authentication Guide" icon="lock" href="/backend/authentication">
+  Learn about JWT authentication
+</Card>
+
+## Database Integration
+
+### Supabase Client
+
+The backend uses Supabase for PostgreSQL database access:
+
+```python
+from supabase import create_client
+
+supabase = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY")
+)
+
+# Query data
+companies = supabase.table("companies").select("*").execute()
+```
+
+### Row Level Security
+
+All tables have RLS policies for firm-level data isolation.
+
+<Card title="Database Guide" icon="database" href="/backend/database/overview">
+  Explore the database architecture
+</Card>
+
+## Development Workflow
+
+### Starting the Server
+
+```bash
+cd zarna-backend/api
+python run.py
+```
+
+Expected output:
+```
+[STARTUP] 🚀 Starting Zarna API with Agent Pool Manager...
+[STARTUP] ✅ Agent Pool Manager started successfully
+[STARTUP] ✅ Zarna API startup complete
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+### API Documentation
+
+Once running, access interactive API docs:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+### Hot Reload
+
+Development server automatically reloads on file changes.
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+# Response: {"status": "healthy"}
+```
+
+## API Patterns
+
+### Request/Response Models
+
+All endpoints use Pydantic models for validation:
+
+```python
+from pydantic import BaseModel
+
+class CompanyCreate(BaseModel):
+    name: str
+    industry: str | None = None
+    revenue: float | None = None
+
+class CompanyResponse(BaseModel):
+    id: str
+    name: str
+    industry: str | None
+    revenue: float | None
+    created_at: str
+
+@router.post("/companies", response_model=CompanyResponse)
+async def create_company(company: CompanyCreate):
+    # Validation happens automatically
+    return created_company
+```
+
+### Error Handling
+
+Consistent error responses:
+
+```python
+from fastapi import HTTPException
+
+# 404 Not Found
+raise HTTPException(status_code=404, detail="Company not found")
+
+# 400 Bad Request
+raise HTTPException(status_code=400, detail="Invalid company data")
+
+# 401 Unauthorized
+raise HTTPException(status_code=401, detail="Authentication required")
+```
+
+### Async/Await
+
+All endpoints use async for non-blocking I/O:
+
+```python
+@router.get("/companies/{company_id}")
+async def get_company(company_id: str):
+    company = await fetch_company(company_id)  # Non-blocking
+    return company
+```
+
+## Performance
+
+### Agent Pool System
+
+Eliminates 5-11s cold start latency for AI agents.
+
+<Card title="Agent Pool Guide" icon="bolt" href="/architecture/agent-pool">
+  Learn about performance optimization
+</Card>
+
+### Background Tasks
+
+Long-running operations use background tasks:
+
+```python
+from fastapi import BackgroundTasks
+
+@router.post("/process-document")
+async def process_document(
+    file: UploadFile,
+    background_tasks: BackgroundTasks
+):
+    background_tasks.add_task(process_file, file)
+    return {"status": "processing"}
+```
+
+### Streaming Responses
+
+Reports and chat use Server-Sent Events (SSE) for real-time streaming:
+
+```python
+from fastapi.responses import StreamingResponse
+
+@router.get("/stream-report")
+async def stream_report():
+    async def generate():
+        for chunk in report_chunks:
+            yield f"data: {chunk}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+```
+
+## Deployment
+
+### Production Server
+
+**File**: `api/run_prod.py`
+
+Uses Gunicorn with Uvicorn workers:
+
+```bash
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
+```
+
+### Environment Configuration
+
+- Development: `run.py` with reload
+- Production: `run_prod.py` without reload
+- Dockerized deployment ready
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/backend/authentication">
+    Learn about JWT authentication
+  </Card>
+  <Card title="Routers" icon="route" href="/backend/routers">
+    Explore all API routers
+  </Card>
+  <Card title="Services" icon="cog" href="/backend/services/crm-agent">
+    Understand core services
+  </Card>
+  <Card title="Database" icon="database" href="/backend/database/overview">
+    Database architecture
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com)
+- [Pydantic Documentation](https://docs.pydantic.dev)
+- [Uvicorn Documentation](https://www.uvicorn.org)
+- [Supabase Python Client](https://supabase.com/docs/reference/python/introduction)

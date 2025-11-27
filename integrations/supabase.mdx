@@ -1,0 +1,550 @@
+---
+title: "Supabase Integration"
+description: "PostgreSQL database with authentication, storage, and real-time features"
+---
+
+## Overview
+
+Supabase provides the database, authentication, file storage, and real-time capabilities for Zarna.
+
+**Website**: [supabase.com](https://supabase.com)
+
+## Features Used
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL Database" icon="database">
+    Managed PostgreSQL with automatic backups
+  </Card>
+  <Card title="Authentication" icon="key">
+    Built-in auth with JWT tokens
+  </Card>
+  <Card title="Storage" icon="folder">
+    S3-compatible file storage
+  </Card>
+  <Card title="Row Level Security" icon="shield">
+    Firm-level data isolation
+  </Card>
+  <Card title="Real-time" icon="bolt">
+    WebSocket subscriptions (coming soon)
+  </Card>
+  <Card title="Edge Functions" icon="code">
+    Serverless functions (future use)
+  </Card>
+</CardGroup>
+
+## Setup
+
+### 1. Create Project
+
+1. Go to [supabase.com](https://supabase.com)
+2. Click "New Project"
+3. Configure:
+   - **Name**: Zarna Production (or Development)
+   - **Database Password**: Generate strong password
+   - **Region**: Choose closest to users
+4. Wait 2-3 minutes for initialization
+
+### 2. Get API Keys
+
+From Supabase Dashboard → Settings → API:
+
+```bash
+# For Backend (.env)
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...  # service_role key
+
+# For Frontend (.env.local)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...  # anon key
+```
+
+From Settings → API → JWT Settings:
+
+```bash
+# For Backend
+SUPABASE_JWT_SECRET=your-jwt-secret
+```
+
+<Warning>
+  **Security**:
+  - Use `service_role` key in backend only (bypasses RLS)
+  - Use `anon` key in frontend (respects RLS)
+  - Never expose service_role key to frontend
+</Warning>
+
+### 3. Database Setup
+
+#### Option A: Run Migration Scripts
+
+```sql
+-- In Supabase SQL Editor
+-- Run each migration file from /zarna-backend/supabase/migrations/
+```
+
+#### Option B: Use Supabase CLI
+
+```bash
+# Install CLI
+npm install -g supabase
+
+# Link project
+supabase link --project-ref your-project-ref
+
+# Push migrations
+supabase db push
+```
+
+## Database Schema
+
+### Core Tables
+
+<Tabs>
+  <Tab title="Companies">
+    ```sql
+    CREATE TABLE companies (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      firm_id UUID NOT NULL REFERENCES firms(id),
+      name TEXT NOT NULL,
+      industry TEXT,
+      revenue NUMERIC,
+      ebitda NUMERIC,
+      employees INTEGER,
+      location TEXT,
+      website TEXT,
+      status TEXT CHECK (status IN ('active', 'inactive', 'archived')),
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_companies_firm_id ON companies(firm_id);
+    CREATE INDEX idx_companies_industry ON companies(industry);
+    CREATE INDEX idx_companies_status ON companies(status);
+    ```
+  </Tab>
+
+  <Tab title="Contacts">
+    ```sql
+    CREATE TABLE contacts (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      firm_id UUID NOT NULL REFERENCES firms(id),
+      company_id UUID REFERENCES companies(id),
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      role TEXT,
+      linkedin TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_contacts_firm_id ON contacts(firm_id);
+    CREATE INDEX idx_contacts_company_id ON contacts(company_id);
+    ```
+  </Tab>
+
+  <Tab title="Deals">
+    ```sql
+    CREATE TABLE deals (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      firm_id UUID NOT NULL REFERENCES firms(id),
+      company_id UUID REFERENCES companies(id),
+      name TEXT NOT NULL,
+      value NUMERIC,
+      stage TEXT,
+      probability INTEGER CHECK (probability >= 0 AND probability <= 100),
+      owner_id UUID REFERENCES users(id),
+      close_date DATE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_deals_firm_id ON deals(firm_id);
+    CREATE INDEX idx_deals_company_id ON deals(company_id);
+    CREATE INDEX idx_deals_stage ON deals(stage);
+    ```
+  </Tab>
+
+  <Tab title="Files">
+    ```sql
+    CREATE TABLE files (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      firm_id UUID NOT NULL REFERENCES firms(id),
+      company_id UUID REFERENCES companies(id),
+      filename TEXT NOT NULL,
+      size BIGINT,
+      content_type TEXT,
+      document_type TEXT,
+      storage_path TEXT NOT NULL,
+      processing_status TEXT DEFAULT 'pending',
+      extracted_data JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      processed_at TIMESTAMP WITH TIME ZONE
+    );
+
+    CREATE INDEX idx_files_firm_id ON files(firm_id);
+    CREATE INDEX idx_files_company_id ON files(company_id);
+    CREATE INDEX idx_files_processing_status ON files(processing_status);
+    ```
+  </Tab>
+</Tabs>
+
+## Row Level Security (RLS)
+
+### Enable RLS on All Tables
+
+```sql
+-- Enable RLS
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE interactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+```
+
+### Create Policies
+
+```sql
+-- Companies: Users can only see their firm's companies
+CREATE POLICY "firm_isolation_companies"
+ON companies
+FOR ALL
+USING (
+  firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  )
+);
+
+-- Contacts: Same firm isolation
+CREATE POLICY "firm_isolation_contacts"
+ON contacts
+FOR ALL
+USING (
+  firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  )
+);
+
+-- Deals: Same pattern
+CREATE POLICY "firm_isolation_deals"
+ON deals
+FOR ALL
+USING (
+  firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  )
+);
+```
+
+### Testing RLS
+
+```sql
+-- Set user context
+SET LOCAL role = authenticated;
+SET LOCAL request.jwt.claims = '{"sub": "user-uuid"}';
+
+-- Query will only return that user's firm data
+SELECT * FROM companies;
+```
+
+## Backend Integration
+
+### Python Client
+
+```python
+from supabase import create_client, Client
+import os
+
+# Initialize client
+supabase: Client = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY")  # service_role key
+)
+
+# Query data
+companies = supabase.table("companies") \
+    .select("*") \
+    .eq("firm_id", firm_id) \
+    .execute()
+
+# Insert data
+new_company = supabase.table("companies").insert({
+    "firm_id": firm_id,
+    "name": "Acme Corp",
+    "industry": "Technology",
+    "revenue": 10000000
+}).execute()
+
+# Update data
+updated = supabase.table("companies") \
+    .update({"revenue": 15000000}) \
+    .eq("id", company_id) \
+    .execute()
+
+# Delete data
+deleted = supabase.table("companies") \
+    .delete() \
+    .eq("id", company_id) \
+    .execute()
+```
+
+### Frontend Client
+
+```typescript
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY  // anon key for frontend
+)
+
+// Query data (respects RLS)
+const { data: companies, error } = await supabase
+  .from('companies')
+  .select('*')
+  .eq('industry', 'Technology')
+
+// Real-time subscription
+const subscription = supabase
+  .channel('companies')
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'companies' },
+    (payload) => {
+      console.log('Change detected:', payload)
+    }
+  )
+  .subscribe()
+```
+
+## Storage
+
+### File Upload
+
+```python
+# Backend upload
+from supabase import create_client
+
+supabase = create_client(url, key)
+
+# Upload file
+with open('document.pdf', 'rb') as f:
+    supabase.storage.from_('documents').upload(
+        'company-123/cim-2024.pdf',
+        f,
+        file_options={"content-type": "application/pdf"}
+    )
+
+# Get public URL
+url = supabase.storage.from_('documents').get_public_url('company-123/cim-2024.pdf')
+```
+
+### Storage Buckets
+
+Create storage buckets in Supabase Dashboard → Storage:
+
+- `documents` - Company documents
+- `avatars` - User profile pictures
+- `logos` - Company logos
+- `reports` - Generated reports
+
+### Storage Policies
+
+```sql
+-- Users can upload to their firm's folder
+CREATE POLICY "firm_upload_policy"
+ON storage.objects
+FOR INSERT
+WITH CHECK (
+  bucket_id = 'documents' AND
+  (storage.foldername(name))[1] IN (
+    SELECT id::text FROM firms f
+    JOIN users u ON u.firm_id = f.id
+    WHERE u.id = auth.uid()
+  )
+);
+```
+
+## Real-time Subscriptions
+
+### Enable Real-time
+
+```sql
+-- Enable real-time for tables
+ALTER PUBLICATION supabase_realtime ADD TABLE companies;
+ALTER PUBLICATION supabase_realtime ADD TABLE deals;
+ALTER PUBLICATION supabase_realtime ADD TABLE contacts;
+```
+
+### Subscribe to Changes
+
+```typescript
+// Frontend subscription
+const subscription = supabase
+  .channel('crm-updates')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'companies'
+    },
+    (payload) => {
+      console.log('New company:', payload.new)
+      // Update UI
+      setCompanies(prev => [...prev, payload.new])
+    }
+  )
+  .on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'companies'
+    },
+    (payload) => {
+      console.log('Company updated:', payload.new)
+      // Update UI
+      setCompanies(prev =>
+        prev.map(c => c.id === payload.new.id ? payload.new : c)
+      )
+    }
+  )
+  .subscribe()
+
+// Cleanup
+useEffect(() => {
+  return () => {
+    subscription.unsubscribe()
+  }
+}, [])
+```
+
+## Database Functions
+
+### Custom Functions
+
+Create SQL functions for complex operations:
+
+```sql
+-- Get company with related data
+CREATE OR REPLACE FUNCTION get_company_with_relations(company_uuid UUID)
+RETURNS JSON AS $$
+BEGIN
+  RETURN (
+    SELECT json_build_object(
+      'company', (SELECT row_to_json(c) FROM companies c WHERE id = company_uuid),
+      'contacts', (SELECT json_agg(ct) FROM contacts ct WHERE company_id = company_uuid),
+      'deals', (SELECT json_agg(d) FROM deals d WHERE company_id = company_uuid),
+      'files', (SELECT json_agg(f) FROM files f WHERE company_id = company_uuid)
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Usage**:
+
+```python
+result = supabase.rpc('get_company_with_relations', {'company_uuid': company_id}).execute()
+```
+
+## Environment Variables
+
+### Backend
+
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...  # service_role
+SUPABASE_JWT_SECRET=your-jwt-secret
+```
+
+### Frontend
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...  # anon
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always use RLS policies">
+    Never rely on application-level security alone. RLS provides defense in depth.
+  </Accordion>
+
+  <Accordion title="Index frequently queried columns">
+    ```sql
+    CREATE INDEX idx_companies_firm_industry ON companies(firm_id, industry);
+    ```
+  </Accordion>
+
+  <Accordion title="Use connection pooling">
+    Supabase has built-in connection pooling. For high traffic, use Supavisor.
+  </Accordion>
+
+  <Accordion title="Monitor query performance">
+    Use Supabase Dashboard → Database → Query Performance to identify slow queries.
+  </Accordion>
+
+  <Accordion title="Regular backups">
+    Supabase automatically backs up daily. Download manual backups for critical changes.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection error">
+    **Cause**: Invalid URL or key
+
+    **Solution**:
+    - Verify SUPABASE_URL format: `https://project-id.supabase.co`
+    - Check key is correct (service_role for backend, anon for frontend)
+    - Ensure project is not paused (free tier)
+  </Accordion>
+
+  <Accordion title="RLS blocking queries">
+    **Cause**: RLS policy too restrictive
+
+    **Solution**:
+    - Test queries in SQL Editor with `auth.uid()` set
+    - Check firm_id is correctly set
+    - Verify user has permission
+    - Use service_role key to bypass RLS (backend only)
+  </Accordion>
+
+  <Accordion title="Slow queries">
+    **Cause**: Missing indexes or inefficient queries
+
+    **Solution**:
+    - Add indexes on frequently filtered columns
+    - Use EXPLAIN ANALYZE to debug
+    - Check Query Performance in dashboard
+    - Consider materialized views for complex aggregations
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="table" href="/backend/database/schema">
+    Explore the complete database schema
+  </Card>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    See how backend uses Supabase
+  </Card>
+  <Card title="Authentication" icon="lock" href="/architecture/authentication-flow">
+    JWT authentication with Supabase
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore the API
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [Supabase Documentation](https://supabase.com/docs)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Row Level Security Guide](https://supabase.com/docs/guides/auth/row-level-security)
+- [Supabase Python Client](https://supabase.com/docs/reference/python/introduction)

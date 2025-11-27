@@ -1,0 +1,56 @@
+---
+title: "Utilities API"
+description: "Utility endpoints for system operations"
+---
+
+## Overview
+
+The Utilities API provides helper endpoints for common operations and system utilities.
+
+**Base Path**: `/api/utilities`
+
+## Endpoints
+
+### Health Check
+
+```bash
+GET /health
+```
+
+**Response**:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-22T10:30:00Z",
+  "version": "0.1.0"
+}
+```
+
+### System Info
+
+```bash
+GET /api/utilities/info
+```
+
+**Response**:
+
+```json
+{
+  "version": "0.1.0",
+  "environment": "production",
+  "agent_pools": 5,
+  "uptime_hours": 48.5
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Introduction" icon="book" href="/api-reference/introduction">
+    API overview
+  </Card>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    Backend architecture
+  </Card>
+</CardGroup>

@@ -1,0 +1,60 @@
+---
+title: "Staffing API"
+description: "Team staffing and workload management"
+---
+
+## Overview
+
+The Staffing API manages team workload distribution and capacity planning.
+
+**Base Path**: `/api/staffing`
+
+## Endpoints
+
+### Get Team Workload
+
+```bash
+GET /api/staffing/workload
+```
+
+**Response**:
+
+```json
+{
+  "team_members": [
+    {
+      "user_id": "user-1",
+      "name": "John Doe",
+      "active_deals": 8,
+      "total_deal_value": 2000000,
+      "capacity": 75
+    }
+  ]
+}
+```
+
+### Assign Deal
+
+```bash
+POST /api/staffing/assign
+```
+
+**Request Body**:
+
+```json
+{
+  "deal_id": "deal-uuid",
+  "assignee_id": "user-uuid"
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deals API" icon="handshake" href="/api-reference/deals">
+    Deal management
+  </Card>
+  <Card title="Users API" icon="users" href="/api-reference/users">
+    User management
+  </Card>
+</CardGroup>

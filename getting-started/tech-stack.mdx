@@ -1,0 +1,614 @@
+---
+title: "Technology Stack"
+description: "Complete breakdown of technologies powering Zarna"
+---
+
+## Overview
+
+Zarna leverages modern, production-ready technologies across the entire stack. This page provides a comprehensive breakdown of every major technology, why it was chosen, and how it's used.
+
+## Frontend Technologies
+
+### Core Framework
+
+<AccordionGroup>
+  <Accordion title="React 19.1.0" icon="react">
+    **Purpose**: UI library for building the user interface
+
+    **Why React 19**:
+    - Latest React with improved performance
+    - Server Components support (future-ready)
+    - Better TypeScript integration
+    - Improved hooks performance
+    - Automatic batching for state updates
+
+    **Key Features Used**:
+    - Functional components with hooks
+    - Context API for global state
+    - Suspense for lazy loading
+    - Error boundaries for fault tolerance
+
+    **Learn More**: [Frontend Overview](/frontend/overview)
+  </Accordion>
+
+  <Accordion title="Vite 6.2.0" icon="bolt">
+    **Purpose**: Build tool and development server
+
+    **Why Vite**:
+    - Lightning-fast hot module replacement (HMR)
+    - Native ES modules for development
+    - Optimized production builds
+    - Plugin ecosystem
+    - Better DX than Create React App
+
+    **Performance**:
+    - Dev server starts in <1 second
+    - HMR updates in <100ms
+    - Production build in 10-30 seconds
+
+    **Configuration**: `vite.config.ts`
+  </Accordion>
+
+  <Accordion title="TypeScript 5.x" icon="code">
+    **Purpose**: Type-safe JavaScript
+
+    **Why TypeScript**:
+    - Catch bugs at compile-time
+    - Better IDE autocomplete
+    - Self-documenting code
+    - Refactoring confidence
+    - Required for modern React development
+
+    **Configuration**: Strict mode enabled in `tsconfig.json`
+
+    **Key Features Used**:
+    - Interface definitions for props
+    - Type inference
+    - Generic components
+    - Utility types (Partial, Pick, Omit)
+  </Accordion>
+</AccordionGroup>
+
+### Styling & UI
+
+<AccordionGroup>
+  <Accordion title="TailwindCSS 4.0.9" icon="palette">
+    **Purpose**: Utility-first CSS framework
+
+    **Why Tailwind 4**:
+    - Faster than previous versions
+    - Better PostCSS integration
+    - Improved dark mode support
+    - Smaller bundle sizes
+    - Excellent developer experience
+
+    **Key Features**:
+    - Utility classes for rapid development
+    - Custom theme configuration
+    - Dark mode with `dark:` prefix
+    - Responsive design with breakpoints
+    - JIT (Just-In-Time) compilation
+
+    **Configuration**: `tailwind.config.js`
+  </Accordion>
+
+  <Accordion title="shadcn/ui (New York variant)" icon="puzzle-piece">
+    **Purpose**: High-quality, accessible component library
+
+    **Why shadcn/ui**:
+    - Copy-paste components (no npm bloat)
+    - Built on Radix UI primitives
+    - Fully customizable
+    - TypeScript-first
+    - Excellent accessibility (WCAG AA+)
+
+    **Components Used**:
+    - Button, Card, Dialog, Dropdown
+    - Form, Input, Select, Textarea
+    - Table, Tabs, Toast, Tooltip
+    - Sidebar, Navigation, Command
+    - 40+ components total
+
+    **Installation**: `npx shadcn@latest add [component]`
+
+    **Learn More**: [Component Guide](/frontend/components)
+  </Accordion>
+
+  <Accordion title="Radix UI" icon="component">
+    **Purpose**: Unstyled, accessible component primitives
+
+    **Why Radix**:
+    - WAI-ARIA compliant
+    - Keyboard navigation built-in
+    - Focus management
+    - Screen reader support
+    - Composable architecture
+
+    **Used via shadcn/ui**: All shadcn components are built on Radix primitives
+
+    **Key Primitives**:
+    - @radix-ui/react-dialog
+    - @radix-ui/react-dropdown-menu
+    - @radix-ui/react-select
+    - @radix-ui/react-tabs
+    - 20+ primitives total
+  </Accordion>
+
+  <Accordion title="class-variance-authority (CVA)" icon="wand-magic-sparkles">
+    **Purpose**: Component variant management
+
+    **Why CVA**:
+    - Type-safe variants
+    - Clean API for component variants
+    - Works seamlessly with Tailwind
+    - Better than manual className logic
+
+    **Example**:
+    ```typescript
+    const buttonVariants = cva("base-classes", {
+      variants: {
+        variant: { default: "...", destructive: "..." },
+        size: { sm: "...", lg: "..." }
+      }
+    })
+    ```
+  </Accordion>
+
+  <Accordion title="Lucide React 0.544.0" icon="icons">
+    **Purpose**: Icon library
+
+    **Why Lucide**:
+    - 1,000+ icons
+    - Consistent design
+    - Tree-shakeable
+    - TypeScript support
+    - MIT licensed
+
+    **Usage**:
+    ```typescript
+    import { Check, X, ChevronRight } from "lucide-react"
+    ```
+  </Accordion>
+
+  <Accordion title="next-themes" icon="moon">
+    **Purpose**: Theme management (dark/light mode)
+
+    **Why next-themes**:
+    - Zero-flash on page load
+    - System preference detection
+    - localStorage persistence
+    - Works with SSR
+
+    **Learn More**: [Theme System](/frontend/theme-system)
+  </Accordion>
+</AccordionGroup>
+
+### State & Data Management
+
+<AccordionGroup>
+  <Accordion title="React Router DOM 7.6.2" icon="route">
+    **Purpose**: Client-side routing
+
+    **Why React Router**:
+    - Declarative routing
+    - Nested routes
+    - Protected routes
+    - History management
+
+    **Route Structure**:
+    ```typescript
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
+    ```
+  </Accordion>
+
+  <Accordion title="React Hook Form 7.63.0" icon="clipboard-list">
+    **Purpose**: Form state management
+
+    **Why React Hook Form**:
+    - Minimal re-renders
+    - Built-in validation
+    - Zod integration
+    - Easy to use
+    - Excellent performance
+
+    **Example**:
+    ```typescript
+    const { register, handleSubmit } = useForm()
+    ```
+  </Accordion>
+
+  <Accordion title="Zod 4.1.11" icon="shield-check">
+    **Purpose**: Schema validation
+
+    **Why Zod**:
+    - TypeScript-first
+    - Runtime validation
+    - Type inference
+    - Great error messages
+
+    **Example**:
+    ```typescript
+    const schema = z.object({
+      email: z.string().email(),
+      age: z.number().min(0)
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Additional Libraries
+
+<AccordionGroup>
+  <Accordion title="Recharts 2.15.4" icon="chart-line">
+    **Purpose**: Chart and data visualization
+
+    **Why Recharts**:
+    - Built for React
+    - Responsive by default
+    - Composable API
+    - Good documentation
+
+    **Charts Used**: Line, Bar, Pie, Area, Composed
+  </Accordion>
+
+  <Accordion title="react-pdf" icon="file-pdf">
+    **Purpose**: PDF viewing and rendering
+
+    **Features**:
+    - Display PDFs in browser
+    - Page navigation
+    - Zoom controls
+    - Text selection
+  </Accordion>
+
+  <Accordion title="Framer Motion" icon="sparkles">
+    **Purpose**: Animation library
+
+    **Why Framer Motion**:
+    - Declarative animations
+    - Gesture support
+    - Layout animations
+    - Performance optimized
+  </Accordion>
+
+  <Accordion title="date-fns 4.1.0" icon="calendar">
+    **Purpose**: Date manipulation
+
+    **Why date-fns**:
+    - Modular (tree-shakeable)
+    - Immutable
+    - TypeScript support
+    - Better than Moment.js
+
+    **Functions**: format, parse, add, subtract, isBefore, etc.
+  </Accordion>
+
+  <Accordion title="Sonner 2.0.7" icon="bell">
+    **Purpose**: Toast notifications
+
+    **Why Sonner**:
+    - Beautiful default styling
+    - Promise-based API
+    - Accessible
+    - Customizable
+
+    **Usage**: `toast.success("Success!")`, `toast.error("Error")`
+  </Accordion>
+</AccordionGroup>
+
+## Backend Technologies
+
+### Core Framework
+
+<AccordionGroup>
+  <Accordion title="FastAPI" icon="bolt">
+    **Purpose**: Modern Python web framework
+
+    **Why FastAPI**:
+    - Automatic OpenAPI documentation
+    - Built-in validation (Pydantic)
+    - Async/await support
+    - High performance (comparable to Node.js/Go)
+    - Type hints throughout
+    - WebSocket support
+
+    **Key Features**:
+    - Dependency injection
+    - Background tasks
+    - Middleware support
+    - CORS handling
+    - Request/response models
+
+    **Performance**:
+    - Handles 10,000+ requests/sec
+    - Async I/O for non-blocking operations
+
+    **Learn More**: [Backend Overview](/backend/overview)
+  </Accordion>
+
+  <Accordion title="Uvicorn" icon="server">
+    **Purpose**: ASGI server for FastAPI
+
+    **Why Uvicorn**:
+    - Async support
+    - Fast and lightweight
+    - Auto-reload in development
+    - Production-ready with Gunicorn
+
+    **Configuration**:
+    ```python
+    uvicorn.run("app.main:app",
+      host="0.0.0.0",
+      port=8000,
+      reload=True
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Pydantic" icon="check-circle">
+    **Purpose**: Data validation using Python type hints
+
+    **Why Pydantic**:
+    - Runtime validation
+    - JSON serialization
+    - Type coercion
+    - Error handling
+    - FastAPI integration
+
+    **Example**:
+    ```python
+    class CompanyCreate(BaseModel):
+        name: str
+        industry: Optional[str] = None
+        revenue: Optional[float] = None
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### AI & Document Processing
+
+<AccordionGroup>
+  <Accordion title="Docling" icon="file-lines">
+    **Purpose**: Advanced document processing and extraction
+
+    **Why Docling**:
+    - Supports PDF, DOCX, PPTX, HTML
+    - Layout analysis
+    - Table extraction
+    - Image extraction
+    - Metadata extraction
+
+    **Use Cases**:
+    - CIM (Confidential Information Memorandum) extraction
+    - Financial statement parsing
+    - Due diligence document processing
+
+    **Learn More**: [Document Processing](/backend/services/document-processing)
+  </Accordion>
+
+  <Accordion title="Anthropic Claude SDK" icon="brain">
+    **Purpose**: AI-powered analysis and generation
+
+    **Why Claude**:
+    - 200K token context window
+    - Strong reasoning capabilities
+    - Function calling support
+    - Streaming responses
+    - Better than GPT-4 for analysis
+
+    **Use Cases**:
+    - Report generation
+    - Document summarization
+    - CRM data queries
+    - Email drafting
+
+    **Models Used**:
+    - claude-3-opus (highest quality)
+    - claude-3-sonnet (balanced)
+    - claude-3-haiku (fast responses)
+  </Accordion>
+
+  <Accordion title="AutoGen" icon="users">
+    **Purpose**: Multi-agent AI orchestration
+
+    **Why AutoGen**:
+    - Build multi-agent systems
+    - Agent collaboration
+    - Tool use capabilities
+    - Conversation history
+
+    **Use Cases**:
+    - Agentic chat system
+    - CRM agent operations
+    - Complex multi-step tasks
+
+    **Learn More**: [Agentic System](/architecture/agentic-system)
+  </Accordion>
+
+  <Accordion title="EasyOCR" icon="eye">
+    **Purpose**: Optical Character Recognition
+
+    **Why EasyOCR**:
+    - 80+ languages
+    - GPU support
+    - Good accuracy
+    - Easy to use
+
+    **Use Cases**:
+    - Scanned document processing
+    - Image text extraction
+    - Handwriting recognition (limited)
+  </Accordion>
+
+  <Accordion title="PDFPlumber" icon="file-pdf">
+    **Purpose**: PDF text and table extraction
+
+    **Why PDFPlumber**:
+    - Better table extraction than PyPDF2
+    - Layout preservation
+    - Coordinate-based extraction
+
+    **Use Cases**:
+    - Financial tables
+    - Form data extraction
+    - PDF parsing
+  </Accordion>
+</AccordionGroup>
+
+### Database & Storage
+
+<AccordionGroup>
+  <Accordion title="Supabase Client" icon="database">
+    **Purpose**: PostgreSQL database client
+
+    **Why Supabase**:
+    - Managed PostgreSQL
+    - Built-in authentication
+    - Real-time subscriptions
+    - Row Level Security (RLS)
+    - RESTful API
+    - File storage
+
+    **Features Used**:
+    - Database queries
+    - Auth management
+    - Storage for files
+    - Realtime updates (coming soon)
+
+    **Learn More**: [Database Overview](/backend/database/overview)
+  </Accordion>
+</AccordionGroup>
+
+### External Integrations
+
+<AccordionGroup>
+  <Accordion title="Composio SDK" icon="plug">
+    **Purpose**: OAuth and API integration platform
+
+    **Why Composio**:
+    - Unified OAuth flow for 100+ apps
+    - Token management
+    - Webhook handling
+    - Automatic token refresh
+
+    **Integrations**:
+    - Gmail (OAuth + sending)
+    - Outlook (OAuth + sending)
+    - Google Drive (file sync)
+    - Google Calendar (event management)
+
+    **Learn More**: [OAuth Setup](/integrations/oauth-setup)
+  </Accordion>
+
+  <Accordion title="Exa SDK" icon="magnifying-glass">
+    **Purpose**: AI-powered web search for company sourcing
+
+    **Why Exa**:
+    - Better than Google for finding companies
+    - Semantic search
+    - Company-specific results
+    - API access
+
+    **Use Cases**:
+    - Company discovery
+    - Competitor analysis
+    - Market research
+
+    **Learn More**: [Sourcing API](/api-reference/sourcing)
+  </Accordion>
+</AccordionGroup>
+
+## Development Tools
+
+### Code Quality
+
+<AccordionGroup>
+  <Accordion title="ESLint" icon="code">
+    **Purpose**: JavaScript/TypeScript linting
+
+    **Rules**: React, TypeScript, accessibility
+    **Config**: `.eslintrc.json`
+  </Accordion>
+
+  <Accordion title="Prettier" icon="wand-magic-sparkles">
+    **Purpose**: Code formatting
+
+    **Config**: `.prettierrc`
+    **Runs**: On save (recommended)
+  </Accordion>
+
+  <Accordion title="Black" icon="python">
+    **Purpose**: Python code formatting
+
+    **Style**: PEP 8 compliant
+    **Config**: `pyproject.toml`
+  </Accordion>
+</AccordionGroup>
+
+### Build & Deployment
+
+<AccordionGroup>
+  <Accordion title="Vercel/Netlify" icon="cloud">
+    **Purpose**: Frontend hosting
+
+    **Features**:
+    - Automatic deployments from Git
+    - CDN distribution
+    - Custom domains
+    - Preview deployments
+  </Accordion>
+
+  <Accordion title="Railway/Render" icon="server">
+    **Purpose**: Backend hosting
+
+    **Features**:
+    - Container deployment
+    - Auto-scaling
+    - Environment variables
+    - Health checks
+  </Accordion>
+
+  <Accordion title="GitHub Actions" icon="github">
+    **Purpose**: CI/CD pipelines
+
+    **Workflows**:
+    - Linting on PR
+    - Type checking
+    - Build verification
+    - Automated deployments
+  </Accordion>
+</AccordionGroup>
+
+## Package Managers
+
+- **npm**: Frontend package management
+- **pip**: Backend package management
+- **Virtual Environment**: Python dependency isolation
+
+## Version Control
+
+- **Git**: Source control
+- **GitHub**: Code hosting
+- **Conventional Commits**: Commit message format
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Frontend Deep Dive" icon="browser" href="/frontend/overview">
+    Explore the React application in detail
+  </Card>
+  <Card title="Backend Deep Dive" icon="server" href="/backend/overview">
+    Understand the FastAPI architecture
+  </Card>
+  <Card title="Start Building" icon="rocket" href="/quickstart">
+    Get started with development
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Explore available endpoints
+  </Card>
+</CardGroup>

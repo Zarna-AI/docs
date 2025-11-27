@@ -1,0 +1,73 @@
+---
+title: "Egnyte Integration"
+description: "Enterprise file sharing and content governance with Egnyte"
+---
+
+## Overview
+
+The Egnyte integration provides enterprise-grade file management and syncing capabilities.
+
+**Router**: `api/app/routers/egnyte.py`
+**Service**: `scripts/egnyte_service/`
+
+## Features
+
+- OAuth authentication with Egnyte
+- File and folder synchronization
+- Version control
+- Access control integration
+
+## Setup
+
+### 1. Connect Egnyte
+
+Configure OAuth in Egnyte dashboard, then:
+
+```bash
+POST /api/egnyte/oauth/init
+```
+
+### 2. Configure Folders
+
+```bash
+POST /api/egnyte/sync-folders
+{
+  "folders": [
+    {
+      "egnyte_path": "/Shared/Deals",
+      "company_id": "uuid"
+    }
+  ]
+}
+```
+
+## API Endpoints
+
+### List Files
+
+```bash
+GET /api/egnyte/files
+```
+
+### Upload File
+
+```bash
+POST /api/egnyte/upload
+```
+
+### Sync Folder
+
+```bash
+POST /api/egnyte/sync/{folder_id}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Egnyte API" icon="code" href="/api-reference/egnyte">
+    API documentation
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    File management
+  </Card>
+</CardGroup>

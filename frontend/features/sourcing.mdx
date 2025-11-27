@@ -1,0 +1,150 @@
+---
+title: "Sourcing Dashboard"
+description: "AI-powered company discovery and sourcing workflows"
+---
+
+## Overview
+
+The Sourcing Dashboard enables users to discover and source companies using AI-powered search through Exa's semantic search engine.
+
+**Route**: `/sourcing`
+
+## Key Features
+
+- Natural language search
+- Advanced filtering
+- Company intelligence
+- Save to CRM
+- Bulk operations
+
+## Search Interface
+
+```typescript
+function SourcingSearch() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+
+  const handleSearch = async () => {
+    setIsSearching(true)
+
+    const response = await fetch('/api/sourcing/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query,
+        limit: 20
+      })
+    })
+
+    const data = await response.json()
+    setResults(data.results)
+    setIsSearching(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <Input
+          placeholder="e.g., B2B SaaS companies in healthcare with 50-200 employees"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyPress={e => e.key === 'Enter' && handleSearch()}
+        />
+        <Button onClick={handleSearch} disabled={isSearching}>
+          {isSearching ? 'Searching...' : 'Search'}
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {results.map(company => (
+          <CompanyCard key={company.domain} company={company} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+## Company Cards
+
+```typescript
+function CompanyCard({ company }: Props) {
+  const [isSaving, setIsSaving] = useState(false)
+
+  const saveToCRM = async () => {
+    setIsSaving(true)
+
+    await fetch('/api/sourcing/save-to-crm', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ company_data: company })
+    })
+
+    toast.success('Company added to CRM')
+    setIsSaving(false)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{company.name}</CardTitle>
+            <CardDescription>{company.domain}</CardDescription>
+          </div>
+          <Badge>{company.relevance_score.toFixed(2)}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground line-clamp-3">
+          {company.description}
+        </p>
+
+        <div className="mt-4 space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Industry:</span>
+            <span className="font-medium">{company.industry}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Revenue:</span>
+            <span className="font-medium">
+              ${(company.estimated_revenue / 1000000).toFixed(1)}M
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Employees:</span>
+            <span className="font-medium">{company.estimated_employees}</span>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button
+          className="w-full"
+          onClick={saveToCRM}
+          disabled={isSaving}
+        >
+          {isSaving ? 'Saving...' : 'Add to CRM'}
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Sourcing API" icon="code" href="/api-reference/sourcing">
+    API documentation
+  </Card>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Manage sourced companies
+  </Card>
+</CardGroup>

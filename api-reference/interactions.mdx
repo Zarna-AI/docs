@@ -1,0 +1,67 @@
+---
+title: "Interactions API"
+description: "Track meetings, calls, emails, and other touchpoints"
+---
+
+## Overview
+
+The Interactions API tracks all touchpoints with companies and contacts including meetings, calls, emails, and notes.
+
+**Base Path**: `/api/interactions`
+
+## Endpoints
+
+### Create Interaction
+
+```bash
+POST /api/interactions
+```
+
+**Request Body**:
+
+```json
+{
+  "type": "meeting",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "contact_ids": ["dd0e8400-e29b-41d4-a716-446655440888"],
+  "subject": "Partnership discussion",
+  "notes": "Discussed Q1 partnership opportunities...",
+  "date": "2024-01-22T14:00:00Z",
+  "duration_minutes": 60
+}
+```
+
+**Interaction Types**:
+- `meeting` - In-person or video meeting
+- `call` - Phone call
+- `email` - Email communication
+- `note` - General note
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "jj0e8400-e29b-41d4-a716-446655444444",
+  "type": "meeting",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "subject": "Partnership discussion",
+  "created_at": "2024-01-22T14:00:00Z"
+}
+```
+
+### List Interactions
+
+```bash
+GET /api/interactions?company_id={company_id}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Company management
+  </Card>
+  <Card title="Contacts API" icon="user" href="/api-reference/contacts">
+    Contact management
+  </Card>
+</CardGroup>

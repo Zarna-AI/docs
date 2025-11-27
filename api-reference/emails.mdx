@@ -1,0 +1,121 @@
+---
+title: "Emails API"
+description: "Email tracking and history management"
+---
+
+## Overview
+
+The Emails API tracks all email communications with companies and contacts.
+
+**Base Path**: `/api/emails`
+
+## Endpoints
+
+### List Emails
+
+```bash
+GET /api/emails
+```
+
+**Query Parameters**:
+- `company_id`: Filter by company
+- `contact_id`: Filter by contact
+- `direction`: `inbound` or `outbound`
+- `date_from`: Start date
+- `date_to`: End date
+
+**Response**:
+
+```json
+{
+  "emails": [
+    {
+      "id": "mm0e8400-e29b-41d4-a716-446655447777",
+      "company_id": "550e8400-e29b-41d4-a716-446655440000",
+      "contact_id": "dd0e8400-e29b-41d4-a716-446655440888",
+      "subject": "Partnership proposal",
+      "direction": "outbound",
+      "sent_at": "2024-01-22T10:00:00Z",
+      "opened": true,
+      "clicked": false
+    }
+  ],
+  "total": 150
+}
+```
+
+### Get Email Thread
+
+```bash
+GET /api/emails/{email_id}/thread
+```
+
+**Response**:
+
+```json
+{
+  "thread_id": "thread-123",
+  "emails": [
+    {
+      "id": "email-1",
+      "subject": "Partnership proposal",
+      "from": "user@zarna.com",
+      "to": ["john@acmecorp.com"],
+      "sent_at": "2024-01-20T10:00:00Z",
+      "body": "Initial email..."
+    },
+    {
+      "id": "email-2",
+      "subject": "Re: Partnership proposal",
+      "from": "john@acmecorp.com",
+      "to": ["user@zarna.com"],
+      "sent_at": "2024-01-21T14:30:00Z",
+      "body": "Response email..."
+    }
+  ]
+}
+```
+
+## Email Tracking
+
+### Open Tracking
+
+Track when recipients open emails:
+
+```json
+{
+  "opened": true,
+  "opened_at": "2024-01-22T10:05:00Z",
+  "open_count": 3
+}
+```
+
+### Click Tracking
+
+Track link clicks in emails:
+
+```json
+{
+  "clicked": true,
+  "clicks": [
+    {
+      "url": "https://proposal.zarna.com",
+      "clicked_at": "2024-01-22T10:10:00Z"
+    }
+  ]
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Email Bot API" icon="robot" href="/api-reference/email-bot">
+    Automated email handling
+  </Card>
+  <Card title="Contacts API" icon="user" href="/api-reference/contacts">
+    Contact management
+  </Card>
+  <Card title="Interactions API" icon="comments" href="/api-reference/interactions">
+    Track all touchpoints
+  </Card>
+</CardGroup>

@@ -1,0 +1,89 @@
+---
+title: "Financials API"
+description: "Financial records and metrics management"
+---
+
+## Overview
+
+The Financials API manages financial records, metrics, and historical data for companies.
+
+**Base Path**: `/api/financials`
+
+## Endpoints
+
+### Create Financial Record
+
+```bash
+POST /api/financials
+```
+
+**Request Body**:
+
+```json
+{
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "period": "2024 Q4",
+  "period_start": "2024-10-01",
+  "period_end": "2024-12-31",
+  "revenue": 5000000,
+  "cogs": 2000000,
+  "gross_profit": 3000000,
+  "operating_expenses": 1800000,
+  "ebitda": 1200000,
+  "net_income": 900000,
+  "cash_flow": 1100000
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "kk0e8400-e29b-41d4-a716-446655445555",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "period": "2024 Q4",
+  "revenue": 5000000,
+  "ebitda": 1200000,
+  "ebitda_margin": 0.24,
+  "created_at": "2024-01-22T10:00:00Z"
+}
+```
+
+### List Financial Records
+
+```bash
+GET /api/financials?company_id={company_id}
+```
+
+### Get Trends
+
+```bash
+GET /api/financials/{company_id}/trends
+```
+
+**Response**:
+
+```json
+{
+  "revenue_trend": {
+    "growth_rate": 0.25,
+    "cagr": 0.22,
+    "quarterly_data": [...]
+  },
+  "margin_trend": {
+    "ebitda_margin": [0.20, 0.22, 0.24],
+    "net_margin": [0.15, 0.17, 0.18]
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Company management
+  </Card>
+  <Card title="Reports API" icon="chart-line" href="/api-reference/reports">
+    Financial reports
+  </Card>
+</CardGroup>

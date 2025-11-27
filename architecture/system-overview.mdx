@@ -1,0 +1,429 @@
+---
+title: "System Overview"
+description: "Complete system architecture and design patterns for Zarna"
+---
+
+## System Architecture
+
+Zarna is built as a **monorepo** with three main applications working together to deliver a comprehensive private equity workflow platform.
+
+## High-Level Architecture
+
+```
+┌─────────────────────── USER LAYER ───────────────────────┐
+│                                                           │
+│  ┌──────────────┐              ┌───────────────────┐    │
+│  │   Frontend   │              │  Marketing Site   │    │
+│  │  React + Vite │              │   (Next.js)       │    │
+│  │              │              │                   │    │
+│  │ Port: 3000   │              │   Port: 3001      │    │
+│  └──────┬───────┘              └───────────────────┘    │
+│         │                                                │
+└─────────┼────────────────────────────────────────────────┘
+          │
+          │ REST API (HTTPS/JSON)
+          │ WebSocket (Real-time)
+          │
+┌─────────▼────────── APPLICATION LAYER ───────────────────┐
+│                                                           │
+│                    Zarna Backend                          │
+│                  (FastAPI + Python)                       │
+│                                                           │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │           25+ API Routers                          │  │
+│  │  CRM · Files · Email · Calendar · Reports          │  │
+│  │  Drive · SharePoint · Egnyte · Basecamp · etc.    │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                           │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │            Core Services (145+ files)              │  │
+│  │  • CRM Agent (AI CRM operations)                   │  │
+│  │  • Document Processing (Docling, OCR, AI)          │  │
+│  │  • Email Agent (Automation)                        │  │
+│  │  • Report Generation (Streaming AI)                │  │
+│  │  • Agentic Chat (Multi-agent with pool)            │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                           │
+│                    Port: 8000                             │
+└───────────┬──────────────────┬───────────────────────────┘
+            │                  │
+            │                  │
+┌───────────▼───────┐   ┌──────▼────────────────────────────┐
+│                   │   │                                   │
+│    Supabase       │   │      External Services            │
+│   (PostgreSQL)    │   │                                   │
+│                   │   │  • Anthropic Claude (AI)          │
+│   • CRM Tables    │   │  • OpenAI (AI)                    │
+│   • Auth          │   │  • Composio (OAuth)               │
+│   • Storage       │   │  • Exa (Sourcing)                 │
+│   • Real-time     │   │  • Google Drive                   │
+│   • RLS Policies  │   │  • Microsoft Graph                │
+│                   │   │  • Egnyte                         │
+└───────────────────┘   └───────────────────────────────────┘
+```
+
+## Data Flow
+
+### Request Lifecycle
+
+```
+1. User Interaction (Frontend)
+   │
+   ├─> User clicks "Create Company"
+   │
+   ↓
+2. Frontend Request
+   │
+   ├─> React component calls API service
+   ├─> Includes JWT token in Authorization header
+   │
+   ↓
+3. API Gateway (Backend)
+   │
+   ├─> CORS Middleware validates origin
+   ├─> JWT Middleware authenticates user
+   ├─> Extracts user_id and firm_id
+   │
+   ↓
+4. Router Layer
+   │
+   ├─> Route matches /api/companies
+   ├─> Pydantic validates request body
+   ├─> Calls service layer
+   │
+   ↓
+5. Service Layer
+   │
+   ├─> Business logic execution
+   ├─> May call AI services (Claude, etc.)
+   ├─> Prepares database query
+   │
+   ↓
+6. Database Layer
+   │
+   ├─> Supabase client executes query
+   ├─> RLS policies enforce firm isolation
+   ├─> Returns data
+   │
+   ↓
+7. Response Assembly
+   │
+   ├─> Service formats response
+   ├─> Router returns JSON
+   ├─> Middleware adds headers
+   │
+   ↓
+8. Frontend Update
+   │
+   ├─> React state updated
+   ├─> UI re-renders
+   └─> Success toast shown
+```
+
+## Core Subsystems
+
+### 1. Authentication System
+
+```
+┌─────────────┐
+│   User      │
+│  Login      │
+└──────┬──────┘
+       │
+       ↓
+┌──────────────┐
+│  Supabase    │
+│   Auth       │
+└──────┬───────┘
+       │
+       ↓
+┌──────────────┐
+│  JWT Token   │
+│  Generated   │
+└──────┬───────┘
+       │
+       ↓
+┌──────────────┐
+│  Frontend    │
+│   Stores     │
+│   Token      │
+└──────────────┘
+```
+
+**Key Components**:
+- Supabase Auth for user management
+- JWT tokens for API authentication
+- Refresh token mechanism
+- Row Level Security for data isolation
+
+<Card title="Authentication Details" icon="lock" href="/architecture/authentication-flow">
+  See the complete authentication flow
+</Card>
+
+### 2. CRM System
+
+The CRM is the core of Zarna:
+
+**Data Model**:
+- **Companies**: Primary entities
+- **Contacts**: People at companies
+- **Deals**: Opportunities and transactions
+- **Interactions**: Meetings, calls, emails
+- **Financials**: Financial records
+- **Notes**: Unstructured notes
+
+**Features**:
+- Relationship management
+- Activity tracking
+- Pipeline visualization
+- AI-powered insights
+
+<Card title="CRM Architecture" icon="building" href="/architecture/crm-system">
+  Explore the CRM system design
+</Card>
+
+### 3. Document Processing Pipeline
+
+```
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│  Upload  │ -> │ Docling  │ -> │   OCR    │ -> │   AI     │
+│          │    │ Extract  │    │ (if scan)│    │ Analysis │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
+                                                       │
+                                                       ↓
+                                                ┌──────────┐
+                                                │  Store   │
+                                                │   JSON   │
+                                                └──────────┘
+```
+
+**Technologies**:
+- **Docling**: Primary extraction engine
+- **EasyOCR**: Scanned document processing
+- **PDFPlumber**: Fallback PDF processing
+- **Claude AI**: Post-processing and analysis
+
+<Card title="Processing Pipeline" icon="file-lines" href="/architecture/file-processing">
+  See the document processing architecture
+</Card>
+
+### 4. Agentic System
+
+Multi-agent AI system with specialization:
+
+**Agent Types**:
+- **Manager Agent**: Coordinates other agents
+- **Data Retrieval Agent**: Queries database
+- **Analysis Agent**: Performs calculations
+- **Web Search Agent**: External research
+- **Report Writing Agent**: Generates reports
+
+**Key Features**:
+- Parallel agent execution
+- Tool use capabilities
+- Conversation memory
+- Agent pool for performance
+
+<Card title="Agentic Architecture" icon="users" href="/architecture/agentic-system">
+  Explore the multi-agent system
+</Card>
+
+### 5. Integration Layer
+
+Connects to external services:
+
+**OAuth Integrations** (via Composio):
+- Gmail/Google Workspace
+- Outlook/Microsoft 365
+- Google Drive
+- Google Calendar
+
+**Direct Integrations**:
+- SharePoint
+- Egnyte
+- Basecamp
+
+**AI Services**:
+- Anthropic Claude
+- OpenAI
+- AutoGen
+- Exa (sourcing)
+
+## Deployment Architecture
+
+### Development
+
+```
+Local Machine
+├── Frontend: localhost:3000 (Vite dev server)
+├── Backend: localhost:8000 (Uvicorn with reload)
+└── Database: cloud.supabase.co (shared dev)
+```
+
+### Production
+
+```
+Cloud Infrastructure
+├── Frontend: Vercel/Netlify
+│   ├── CDN distribution
+│   ├── Automatic SSL
+│   └── Edge caching
+│
+├── Backend: Railway/Render
+│   ├── Container deployment
+│   ├── Auto-scaling
+│   ├── Health checks
+│   └── Environment secrets
+│
+└── Database: Supabase Production
+    ├── PostgreSQL cluster
+    ├── Automatic backups
+    ├── Point-in-time recovery
+    └── Connection pooling
+```
+
+## Security Architecture
+
+### Multi-Layer Security
+
+```
+┌─────────────── Layer 1: Network ──────────────┐
+│  • HTTPS/TLS encryption                       │
+│  • CORS policies                              │
+│  • Rate limiting                              │
+└───────────────────┬───────────────────────────┘
+                    │
+┌─────────────── Layer 2: Authentication ───────┐
+│  • JWT token validation                       │
+│  • Token expiration (24h)                     │
+│  • Refresh token rotation                     │
+└───────────────────┬───────────────────────────┘
+                    │
+┌─────────────── Layer 3: Authorization ────────┐
+│  • Role-based access control                  │
+│  • Firm-level data isolation                  │
+│  • Row Level Security (RLS)                   │
+└───────────────────┬───────────────────────────┘
+                    │
+┌─────────────── Layer 4: Data ─────────────────┐
+│  • Encrypted at rest                          │
+│  • Encrypted in transit                       │
+│  • Audit logging                              │
+│  • Sensitive field encryption                 │
+└───────────────────────────────────────────────┘
+```
+
+## Performance Optimizations
+
+### Frontend
+
+- **Code Splitting**: Lazy-loaded routes
+- **Tree Shaking**: Remove unused code
+- **Image Optimization**: WebP, lazy loading
+- **Bundle Analysis**: Optimize bundle size
+- **Caching**: Service worker (coming soon)
+
+### Backend
+
+- **Agent Pools**: Eliminate cold starts (5-11s savings)
+- **Database Indexing**: Fast queries
+- **Connection Pooling**: Reuse connections
+- **Async I/O**: Non-blocking operations
+- **Response Streaming**: Incremental delivery
+
+### Database
+
+- **Indexes**: Strategic column indexing
+- **Partitioning**: Time-based (coming soon)
+- **Materialized Views**: Pre-computed aggregations
+- **Read Replicas**: Separate read/write (coming soon)
+
+## Scalability
+
+### Horizontal Scaling
+
+```
+┌─────────────────────────────────────────┐
+│         Load Balancer                   │
+└───────┬─────────┬─────────┬─────────────┘
+        │         │         │
+   ┌────▼───┐ ┌──▼────┐ ┌──▼────┐
+   │Backend │ │Backend│ │Backend│
+   │   1    │ │   2   │ │   3   │
+   └────┬───┘ └───┬───┘ └───┬───┘
+        │         │         │
+        └─────────┼─────────┘
+                  │
+           ┌──────▼──────┐
+           │  Database   │
+           │   Cluster   │
+           └─────────────┘
+```
+
+### Vertical Scaling
+
+- Increase container resources
+- Optimize database queries
+- Add Redis caching
+- Implement CDN
+
+## Monitoring & Observability
+
+### Application Metrics
+
+- Request rate, latency, errors
+- Agent pool health
+- Database query performance
+- AI service usage
+
+### Infrastructure Metrics
+
+- CPU, memory, disk usage
+- Network throughput
+- Container health
+- Database connections
+
+### Business Metrics
+
+- Active users
+- API calls per feature
+- Document processing volume
+- Report generation count
+
+## Disaster Recovery
+
+### Backup Strategy
+
+- **Database**: Daily automated backups (Supabase)
+- **Files**: S3-compatible storage with versioning
+- **Code**: Git version control
+- **Configurations**: Environment variable backups
+
+### Recovery Plan
+
+- **RTO** (Recovery Time Objective): < 1 hour
+- **RPO** (Recovery Point Objective): < 1 hour
+- **Backup Retention**: 30 days
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Data Flow" icon="diagram-next" href="/architecture/data-flow">
+    Request/response lifecycle
+  </Card>
+  <Card title="Auth Flow" icon="key" href="/architecture/authentication-flow">
+    Authentication patterns
+  </Card>
+  <Card title="CRM System" icon="building" href="/architecture/crm-system">
+    CRM architecture
+  </Card>
+  <Card title="Agent Pool" icon="bolt" href="/architecture/agent-pool">
+    Performance optimization
+  </Card>
+  <Card title="File Processing" icon="file" href="/architecture/file-processing">
+    Document pipeline
+  </Card>
+  <Card title="Agentic System" icon="users" href="/architecture/agentic-system">
+    Multi-agent design
+  </Card>
+</CardGroup>

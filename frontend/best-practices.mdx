@@ -1,0 +1,697 @@
+---
+title: "Frontend Best Practices"
+description: "Coding standards, patterns, and conventions for the Zarna frontend"
+---
+
+## Core Principles
+
+1. **Type Safety**: No `any` types, strict TypeScript throughout
+2. **Accessibility First**: WCAG AA+ compliance on all components
+3. **Performance**: Lazy loading, code splitting, optimized bundles
+4. **Consistency**: Follow established patterns and conventions
+5. **Maintainability**: Clear, documented, modular code
+
+## TypeScript Best Practices
+
+### Strict Mode
+
+Always use TypeScript strict mode:
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}
+```
+
+### Type Everything
+
+```typescript
+// ✅ Good - Fully typed
+interface ButtonProps {
+  children: React.ReactNode
+  onClick: () => void
+  variant?: "default" | "outline" | "ghost"
+  disabled?: boolean
+}
+
+function Button({ children, onClick, variant = "default", disabled = false }: ButtonProps) {
+  // Implementation
+}
+
+// ❌ Bad - Using any
+function Button(props: any) {
+  // Implementation
+}
+```
+
+### Avoid Enums, Use Union Types
+
+```typescript
+// ✅ Good - Union types
+type Status = "pending" | "active" | "archived"
+
+// ❌ Avoid - Enums (cause issues with tree-shaking)
+enum Status {
+  Pending = "pending",
+  Active = "active",
+  Archived = "archived"
+}
+```
+
+### Use Type Inference
+
+```typescript
+// ✅ Good - Let TypeScript infer
+const users = ["Alice", "Bob", "Charlie"] // string[]
+const count = 42 // number
+
+// ❌ Unnecessary - Over-annotating
+const users: string[] = ["Alice", "Bob", "Charlie"]
+const count: number = 42
+```
+
+## React Best Practices
+
+### Functional Components Only
+
+```typescript
+// ✅ Good - Functional component
+export function UserCard({ user }: UserCardProps) {
+  return <div>{user.name}</div>
+}
+
+// ❌ Bad - Class component (outdated)
+export class UserCard extends React.Component {
+  render() {
+    return <div>{this.props.user.name}</div>
+  }
+}
+```
+
+### Destructure Props
+
+```typescript
+// ✅ Good - Destructured
+export function Button({ children, onClick, variant }: ButtonProps) {
+  return <button onClick={onClick}>{children}</button>
+}
+
+// ❌ Bad - Props object
+export function Button(props: ButtonProps) {
+  return <button onClick={props.onClick}>{props.children}</button>
+}
+```
+
+### Use Proper React 19 Types
+
+```typescript
+// ✅ Good - Proper types
+interface Props extends React.ComponentProps<"button"> {
+  customProp?: string
+}
+
+// Component props
+children: React.ReactNode
+onClick: () => void
+onChange: (value: string) => void
+```
+
+### Extract Reusable Logic to Hooks
+
+```typescript
+// ✅ Good - Custom hook
+function useCompanyData(companyId: string) {
+  const [company, setCompany] = useState<Company | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch
+
+Company(`/api/companies/${companyId}`)
+      .then(setCompany)
+      .finally(() => setIsLoading(false))
+  }, [companyId])
+
+  return { company, isLoading }
+}
+
+// Usage in component
+function CompanyDetails({ companyId }: Props) {
+  const { company, isLoading } = useCompanyData(companyId)
+  // Render logic
+}
+```
+
+## Styling Best Practices
+
+### Always Use `cn()` for Class Merging
+
+```tsx
+import { cn } from "@/lib/utils"
+
+// ✅ Good - Intelligently merges classes
+<div className={cn("base-class", className)} />
+<div className={cn("p-4 text-lg", isActive && "bg-primary")} />
+
+// ❌ Bad - String concatenation (conflicts possible)
+<div className={`base-class ${className}`} />
+```
+
+### Use CSS Variables for Colors
+
+```tsx
+// ✅ Good - Theme-aware
+<div className="bg-primary text-primary-foreground" />
+<p className="text-muted-foreground" />
+
+// ❌ Bad - Hardcoded colors (breaks dark mode)
+<div className="bg-blue-500 text-white" />
+<p className="text-gray-600" />
+```
+
+### Semantic Color Usage
+
+```tsx
+// ✅ Good - Semantic usage
+<Button variant="destructive">Delete</Button>  // Red, dangerous action
+<Button variant="secondary">Cancel</Button>    // Gray, less important
+<Button variant="default">Save</Button>        // Primary brand color
+
+// ❌ Bad - Color-based naming
+<Button variant="red">Delete</Button>
+<Button variant="gray">Cancel</Button>
+```
+
+### Responsive Design
+
+```tsx
+// ✅ Good - Mobile-first approach
+<div className="flex flex-col md:flex-row lg:grid lg:grid-cols-3">
+  <div className="w-full md:w-1/2 lg:w-auto">Content</div>
+</div>
+
+// Breakpoints:
+// sm: 640px
+// md: 768px
+// lg: 1024px
+// xl: 1280px
+// 2xl: 1536px
+```
+
+## Component Best Practices
+
+### Composability Over Configuration
+
+```tsx
+// ✅ Good - Composable
+<Card>
+  <CardHeader>
+    <CardTitle>Title</CardTitle>
+  </CardHeader>
+  <CardContent>Content</CardContent>
+</Card>
+
+// ❌ Bad - Configuration props
+<Card title="Title" content="Content" />
+```
+
+### Single Responsibility
+
+```tsx
+// ✅ Good - Focused components
+function UserAvatar({ user }: Props) {
+  return <Avatar src={user.avatar} alt={user.name} />
+}
+
+function UserName({ user }: Props) {
+  return <span className="font-semibold">{user.name}</span>
+}
+
+function UserCard({ user }: Props) {
+  return (
+    <Card>
+      <UserAvatar user={user} />
+      <UserName user={user} />
+    </Card>
+  )
+}
+
+// ❌ Bad - Does too much
+function UserCard({ user }: Props) {
+  return (
+    <Card>
+      <Avatar src={user.avatar} />
+      <span>{user.name}</span>
+      <Button onClick={() => /* complex logic */}>Edit</Button>
+      {/* More unrelated logic */}
+    </Card>
+  )
+}
+```
+
+### Avoid Prop Drilling
+
+```tsx
+// ✅ Good - Context for deep trees
+const UserContext = createContext<User | null>(null)
+
+function App() {
+  const [user, setUser] = useState<User | null>(null)
+  return (
+    <UserContext.Provider value={user}>
+      <Layout>
+        <Dashboard />
+      </Layout>
+    </UserContext.Provider>
+  )
+}
+
+function Dashboard() {
+  const user = useContext(UserContext)
+  return <div>Welcome, {user?.name}</div>
+}
+
+// ❌ Bad - Prop drilling through many levels
+function App() {
+  const [user, setUser] = useState<User | null>(null)
+  return <Layout user={user}><Dashboard user={user} /></Layout>
+}
+```
+
+## Performance Best Practices
+
+### Lazy Load Heavy Components
+
+```tsx
+import { lazy, Suspense } from "react"
+
+const PDFViewer = lazy(() => import("@/components/PDFViewer"))
+const ReportGenerator = lazy(() => import("@/components/ReportGenerator"))
+
+function App() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PDFViewer file={file} />
+    </Suspense>
+  )
+}
+```
+
+### Memoize Expensive Calculations
+
+```tsx
+import { useMemo } from "react"
+
+function DataTable({ data }: Props) {
+  // ✅ Good - Memoized
+  const sortedData = useMemo(() => {
+    return data.sort((a, b) => a.name.localeCompare(b.name))
+  }, [data])
+
+  // ❌ Bad - Recalculates every render
+  const sortedData = data.sort((a, b) => a.name.localeCompare(b.name))
+
+  return <Table data={sortedData} />
+}
+```
+
+### Use useCallback for Functions
+
+```tsx
+import { useCallback } from "react"
+
+function SearchInput({ onSearch }: Props) {
+  // ✅ Good - Memoized callback
+  const handleSearch = useCallback((query: string) => {
+    onSearch(query)
+  }, [onSearch])
+
+  return <Input onChange={e => handleSearch(e.target.value)} />
+}
+```
+
+### Minimize Re-renders with React.memo
+
+```tsx
+import React from "react"
+
+// ✅ Good - Memoized component
+export const ExpensiveComponent = React.memo(function ExpensiveComponent({ data }: Props) {
+  // Complex rendering logic
+  return <div>{/* Expensive render */}</div>
+})
+
+// Only re-renders when props actually change
+```
+
+## Accessibility Best Practices
+
+### Semantic HTML
+
+```tsx
+// ✅ Good - Semantic
+<nav>
+  <ul>
+    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/companies">Companies</a></li>
+  </ul>
+</nav>
+
+<main>
+  <article>
+    <h1>Title</h1>
+    <p>Content</p>
+  </article>
+</main>
+
+// ❌ Bad - Divs for everything
+<div>
+  <div>
+    <div onClick={handleClick}>Dashboard</div>
+    <div onClick={handleClick}>Companies</div>
+  </div>
+</div>
+```
+
+### ARIA Labels
+
+```tsx
+// ✅ Good - Accessible
+<Button aria-label="Close dialog">
+  <X className="h-4 w-4" />
+</Button>
+
+<Input
+  aria-label="Search companies"
+  aria-describedby="search-help"
+/>
+<span id="search-help" className="sr-only">
+  Type to search for companies by name
+</span>
+
+// ❌ Bad - No labels for icons
+<Button>
+  <X className="h-4 w-4" />
+</Button>
+```
+
+### Keyboard Navigation
+
+```tsx
+// ✅ Good - Keyboard accessible
+<div
+  role="button"
+  tabIndex={0}
+  onClick={handleClick}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      handleClick()
+    }
+  }}
+>
+  Click me
+</div>
+
+// ❌ Bad - Only works with mouse
+<div onClick={handleClick}>Click me</div>
+```
+
+### Focus Management
+
+```tsx
+import { useEffect, useRef } from "react"
+
+function Dialog({ isOpen }: Props) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      closeButtonRef.current?.focus()
+    }
+  }, [isOpen])
+
+  return (
+    <DialogPrimitive.Root open={isOpen}>
+      <Button ref={closeButtonRef}>Close</Button>
+    </DialogPrimitive.Root>
+  )
+}
+```
+
+## Code Organization
+
+### Import Order
+
+```typescript
+// 1. External dependencies
+import * as React from "react"
+import { useState, useEffect } from "react"
+
+// 2. Internal components
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+
+// 3. Hooks
+import { useAuth } from "@/hooks/use-auth"
+
+// 4. Utils
+import { cn } from "@/lib/utils"
+
+// 5. Types
+import type { User } from "@/types"
+
+// 6. Styles
+import "./styles.css"
+```
+
+### File Structure
+
+```typescript
+// 1. Imports (as above)
+
+// 2. Types/Interfaces
+interface ComponentProps {
+  // ...
+}
+
+// 3. Constants
+const ITEMS_PER_PAGE = 10
+
+// 4. Component
+export function Component(props: ComponentProps) {
+  // 4a. Hooks
+  // 4b. Derived state
+  // 4c. Handlers
+  // 4d. Effects
+  // 4e. Render
+}
+
+// 5. Sub-components or helpers
+```
+
+## Error Handling
+
+### Try-Catch for Async Operations
+
+```typescript
+async function fetchData() {
+  try {
+    const response = await fetch("/api/data")
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error("Failed to fetch data:", error)
+    toast.error("Failed to load data")
+    return null
+  }
+}
+```
+
+### Error Boundaries
+
+```tsx
+import { Component, ErrorInfo, ReactNode } from "react"
+
+interface Props {
+  children: ReactNode
+}
+
+interface State {
+  hasError: boolean
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false
+  }
+
+  public static getDerivedStateFromError(): State {
+    return { hasError: true }
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo)
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return <div>Something went wrong.</div>
+    }
+
+    return this.props.children
+  }
+}
+```
+
+## Testing Readiness
+
+### Testable Component Structure
+
+```tsx
+// ✅ Good - Easy to test
+export function SearchInput({ onSearch }: Props) {
+  const [query, setQuery] = useState("")
+
+  const handleSubmit = () => {
+    onSearch(query)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} data-testid="search-form">
+      <Input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        data-testid="search-input"
+      />
+      <Button type="submit" data-testid="search-button">
+        Search
+      </Button>
+    </form>
+  )
+}
+
+// Test IDs for easy selection
+// Separated concerns (rendering vs logic)
+// Props for dependency injection
+```
+
+## Common Pitfalls to Avoid
+
+<AccordionGroup>
+  <Accordion title="Avoid inline object creation in props">
+    ```tsx
+    // ❌ Bad - Creates new object every render
+    <Component style={{ margin: 10 }} />
+
+    // ✅ Good - Stable reference
+    const style = { margin: 10 }
+    <Component style={style} />
+    ```
+  </Accordion>
+
+  <Accordion title="Don't use array index as key">
+    ```tsx
+    // ❌ Bad - Index as key
+    {items.map((item, index) => <Item key={index} />)}
+
+    // ✅ Good - Stable unique ID
+    {items.map(item => <Item key={item.id} />)}
+    ```
+  </Accordion>
+
+  <Accordion title="Avoid async useEffect">
+    ```tsx
+    // ❌ Bad - Async useEffect
+    useEffect(async () => {
+      await fetchData()
+    }, [])
+
+    // ✅ Good - IIFE or separate function
+    useEffect(() => {
+      (async () => {
+        await fetchData()
+      })()
+    }, [])
+    ```
+  </Accordion>
+
+  <Accordion title="Clean up side effects">
+    ```tsx
+    // ✅ Good - Cleanup function
+    useEffect(() => {
+      const timer = setTimeout(() => {}, 1000)
+      return () => clearTimeout(timer)
+    }, [])
+
+    // ❌ Bad - No cleanup
+    useEffect(() => {
+      setTimeout(() => {}, 1000)
+    }, [])
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Documentation
+
+### Comment Complex Logic
+
+```typescript
+// ✅ Good - Explain why, not what
+// Calculate revenue growth using compound annual growth rate (CAGR)
+// Formula: (Ending Value / Beginning Value)^(1/Number of Years) - 1
+const cagr = Math.pow(endingRevenue / beginningRevenue, 1 / years) - 1
+
+// ❌ Bad - States the obvious
+// Multiply by 100
+const percentage = value * 100
+```
+
+### JSDoc for Public APIs
+
+```typescript
+/**
+ * Formats a number as currency
+ * @param amount - The numeric amount to format
+ * @param currency - ISO 4217 currency code (default: USD)
+ * @returns Formatted currency string
+ * @example
+ * formatCurrency(1234.56) // "$1,234.56"
+ * formatCurrency(1234.56, "EUR") // "€1,234.56"
+ */
+export function formatCurrency(amount: number, currency: string = "USD"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency
+  }).format(amount)
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="puzzle-piece" href="/frontend/components">
+    Learn component architecture patterns
+  </Card>
+  <Card title="Theme System" icon="palette" href="/frontend/theme-system">
+    Master the color and styling system
+  </Card>
+  <Card title="Project Structure" icon="folder" href="/frontend/project-structure">
+    Understand file organization
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/frontend/tech-stack">
+    Explore all technologies
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [React Best Practices](https://react.dev/learn)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
+- [Web Accessibility Initiative (WAI)](https://www.w3.org/WAI/)
+- [TailwindCSS Best Practices](https://tailwindcss.com/docs/reusing-styles)

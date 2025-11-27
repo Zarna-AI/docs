@@ -1,0 +1,118 @@
+---
+title: "Contacts API"
+description: "Manage contacts and relationships in your CRM"
+---
+
+## Overview
+
+The Contacts API provides endpoints for managing people (contacts) associated with companies in your CRM.
+
+**Base Path**: `/api/contacts`
+
+## Endpoints
+
+### List Contacts
+
+```bash
+GET /api/contacts
+```
+
+**Query Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number (default: 1) |
+| `page_size` | integer | Items per page (default: 20) |
+| `company_id` | UUID | Filter by company |
+| `search` | string | Search by name, email, role |
+| `role` | string | Filter by role |
+
+**Example**:
+
+```bash
+curl -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/contacts?company_id=550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Response**:
+
+```json
+{
+  "data": [
+    {
+      "id": "dd0e8400-e29b-41d4-a716-446655440888",
+      "name": "John Doe",
+      "email": "john@acmecorp.com",
+      "phone": "+1 (555) 123-4567",
+      "role": "CEO",
+      "company_id": "550e8400-e29b-41d4-a716-446655440000",
+      "company_name": "Acme Corp",
+      "linkedin": "https://linkedin.com/in/johndoe",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 12,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+### Create Contact
+
+```bash
+POST /api/contacts
+```
+
+**Request Body**:
+
+```json
+{
+  "name": "Jane Smith",
+  "email": "jane@techstart.com",
+  "phone": "+1 (555) 987-6543",
+  "role": "CTO",
+  "company_id": "660e8400-e29b-41d4-a716-446655440111",
+  "linkedin": "https://linkedin.com/in/janesmith"
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "ee0e8400-e29b-41d4-a716-446655440999",
+  "name": "Jane Smith",
+  "email": "jane@techstart.com",
+  "phone": "+1 (555) 987-6543",
+  "role": "CTO",
+  "company_id": "660e8400-e29b-41d4-a716-446655440111",
+  "linkedin": "https://linkedin.com/in/janesmith",
+  "created_at": "2024-01-22T11:00:00Z"
+}
+```
+
+### Update Contact
+
+```bash
+PATCH /api/contacts/{contact_id}
+```
+
+### Delete Contact
+
+```bash
+DELETE /api/contacts/{contact_id}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Company management
+  </Card>
+  <Card title="Deals API" icon="handshake" href="/api-reference/deals">
+    Deal tracking
+  </Card>
+  <Card title="Interactions API" icon="comments" href="/api-reference/interactions">
+    Track communications
+  </Card>
+</CardGroup>

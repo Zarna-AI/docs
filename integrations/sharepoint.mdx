@@ -1,0 +1,63 @@
+---
+title: "SharePoint Integration"
+description: "Sync files from Microsoft SharePoint to Zarna"
+---
+
+## Overview
+
+The SharePoint integration enables file syncing from Microsoft SharePoint Online to your Zarna CRM.
+
+**Router**: `api/app/routers/sharepoint.py`
+**Service**: `scripts/sharepoint_sync_service.py`
+
+## Features
+
+- OAuth authentication with Microsoft 365
+- Automatic file sync from SharePoint sites
+- Document library integration
+- Version tracking
+
+## Setup
+
+### 1. Connect SharePoint
+
+```bash
+POST /api/sharepoint/oauth/init
+```
+
+### 2. Configure Sync
+
+```bash
+POST /api/sharepoint/sync-config
+{
+  "site_url": "https://yourcompany.sharepoint.com/sites/deals",
+  "document_library": "Documents",
+  "company_id": "uuid",
+  "sync_frequency": "hourly"
+}
+```
+
+## API Endpoints
+
+### List Files
+
+```bash
+GET /api/sharepoint/files
+```
+
+### Sync Now
+
+```bash
+POST /api/sharepoint/sync
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="SharePoint API" icon="code" href="/api-reference/sharepoint">
+    API documentation
+  </Card>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Configure OAuth
+  </Card>
+</CardGroup>

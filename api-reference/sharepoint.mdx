@@ -1,0 +1,72 @@
+---
+title: "SharePoint API"
+description: "Microsoft SharePoint integration endpoints"
+---
+
+## Overview
+
+The SharePoint API provides endpoints for syncing files from SharePoint Online to Zarna.
+
+**Base Path**: `/api/sharepoint`
+
+## Endpoints
+
+### List Files
+
+```bash
+GET /api/sharepoint/files
+```
+
+**Query Parameters**:
+- `site_url`: SharePoint site URL
+- `library`: Document library name
+- `company_id`: Associated company
+
+**Response**:
+
+```json
+{
+  "files": [
+    {
+      "id": "sharepoint-file-123",
+      "name": "Proposal.docx",
+      "size": 1048576,
+      "modified_at": "2024-01-20T10:30:00Z",
+      "web_url": "https://company.sharepoint.com/..."
+    }
+  ]
+}
+```
+
+### Sync Site
+
+```bash
+POST /api/sharepoint/sync
+```
+
+**Request Body**:
+
+```json
+{
+  "site_url": "https://company.sharepoint.com/sites/deals",
+  "library": "Documents",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### Download File
+
+```bash
+GET /api/sharepoint/files/{file_id}/download
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="SharePoint Integration" icon="microsoft" href="/integrations/sharepoint">
+    Setup guide
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    File management
+  </Card>
+</CardGroup>

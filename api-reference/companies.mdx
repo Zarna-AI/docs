@@ -1,0 +1,384 @@
+---
+title: "Companies API"
+description: "Manage companies in your CRM"
+---
+
+## Overview
+
+The Companies API provides endpoints for creating, reading, updating, and deleting company records in your CRM.
+
+**Base Path**: `/api/companies`
+
+## Endpoints
+
+### List Companies
+
+Get a paginated list of companies.
+
+```bash
+GET /api/companies
+```
+
+**Query Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number (default: 1) |
+| `page_size` | integer | Items per page (default: 20, max: 100) |
+| `search` | string | Search by name, industry, location |
+| `industry` | string | Filter by industry |
+| `revenue_min` | number | Minimum revenue |
+| `revenue_max` | number | Maximum revenue |
+| `status` | string | Filter by status (active, inactive, archived) |
+| `sort_by` | string | Sort field (name, revenue, created_at) |
+| `sort_order` | string | Sort order (asc, desc) |
+
+**Example Request**:
+
+```bash
+curl -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/companies?industry=Technology&revenue_min=1000000&sort_by=revenue&sort_order=desc"
+```
+
+**Response**:
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Acme Corp",
+      "industry": "Technology",
+      "revenue": 15000000,
+      "location": "San Francisco, CA",
+      "status": "active",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-20T14:22:00Z"
+    },
+    {
+      "id": "660e8400-e29b-41d4-a716-446655440111",
+      "name": "TechStart Inc",
+      "industry": "Technology",
+      "revenue": 5000000,
+      "location": "Austin, TX",
+      "status": "active",
+      "created_at": "2024-01-10T09:15:00Z",
+      "updated_at": "2024-01-18T11:30:00Z"
+    }
+  ],
+  "total": 45,
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 3
+}
+```
+
+### Get Company
+
+Get a single company by ID.
+
+```bash
+GET /api/companies/{company_id}
+```
+
+**Example Request**:
+
+```bash
+curl -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/companies/550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Response**:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Acme Corp",
+  "industry": "Technology",
+  "revenue": 15000000,
+  "ebitda": 4500000,
+  "employees": 150,
+  "founded_year": 2015,
+  "location": "San Francisco, CA",
+  "website": "https://acmecorp.com",
+  "description": "Leading SaaS provider for enterprise solutions",
+  "status": "active",
+  "contacts_count": 12,
+  "deals_count": 8,
+  "files_count": 25,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-20T14:22:00Z",
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222"
+}
+```
+
+### Create Company
+
+Create a new company.
+
+```bash
+POST /api/companies
+```
+
+**Request Body**:
+
+```json
+{
+  "name": "NewTech Solutions",
+  "industry": "Software",
+  "revenue": 8000000,
+  "ebitda": 2400000,
+  "employees": 80,
+  "founded_year": 2018,
+  "location": "Seattle, WA",
+  "website": "https://newtech.com",
+  "description": "Cloud-based analytics platform",
+  "status": "active"
+}
+```
+
+**Example Request**:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "NewTech Solutions",
+    "industry": "Software",
+    "revenue": 8000000
+  }' \
+  "http://localhost:8000/api/companies"
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "880e8400-e29b-41d4-a716-446655440333",
+  "name": "NewTech Solutions",
+  "industry": "Software",
+  "revenue": 8000000,
+  "ebitda": 2400000,
+  "employees": 80,
+  "founded_year": 2018,
+  "location": "Seattle, WA",
+  "website": "https://newtech.com",
+  "description": "Cloud-based analytics platform",
+  "status": "active",
+  "created_at": "2024-01-22T16:45:00Z",
+  "updated_at": "2024-01-22T16:45:00Z",
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222"
+}
+```
+
+### Update Company
+
+Update an existing company.
+
+```bash
+PATCH /api/companies/{company_id}
+```
+
+**Request Body** (partial update):
+
+```json
+{
+  "revenue": 18000000,
+  "employees": 175,
+  "status": "active"
+}
+```
+
+**Example Request**:
+
+```bash
+curl -X PATCH \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"revenue": 18000000, "employees": 175}' \
+  "http://localhost:8000/api/companies/550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Response** (200 OK):
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Acme Corp",
+  "industry": "Technology",
+  "revenue": 18000000,
+  "employees": 175,
+  "status": "active",
+  "updated_at": "2024-01-23T10:15:00Z"
+}
+```
+
+### Delete Company
+
+Delete a company (soft delete).
+
+```bash
+DELETE /api/companies/{company_id}
+```
+
+**Example Request**:
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/companies/550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Response** (204 No Content)
+
+### Search Companies
+
+Advanced search with filters.
+
+```bash
+POST /api/companies/search
+```
+
+**Request Body**:
+
+```json
+{
+  "query": "tech",
+  "filters": {
+    "industry": ["Technology", "Software"],
+    "revenue_range": {
+      "min": 1000000,
+      "max": 50000000
+    },
+    "location": ["San Francisco", "Austin", "Seattle"],
+    "status": ["active"]
+  },
+  "sort": {
+    "field": "revenue",
+    "order": "desc"
+  },
+  "page": 1,
+  "page_size": 20
+}
+```
+
+**Response**:
+
+```json
+{
+  "data": [...],
+  "total": 28,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+## Data Model
+
+### Company Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique identifier |
+| `name` | string | Company name (required) |
+| `industry` | string | Industry category |
+| `revenue` | number | Annual revenue in USD |
+| `ebitda` | number | EBITDA in USD |
+| `employees` | integer | Number of employees |
+| `founded_year` | integer | Year company was founded |
+| `location` | string | Primary location |
+| `website` | string | Company website URL |
+| `description` | text | Company description |
+| `status` | enum | active, inactive, archived |
+| `contacts_count` | integer | Number of associated contacts |
+| `deals_count` | integer | Number of associated deals |
+| `files_count` | integer | Number of associated files |
+| `created_at` | timestamp | Creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
+| `firm_id` | UUID | Associated firm |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 201 | Created |
+| 204 | No Content (deleted) |
+| 400 | Bad Request (validation error) |
+| 401 | Unauthorized |
+| 404 | Company not found |
+| 422 | Unprocessable Entity |
+| 500 | Internal Server Error |
+
+## Examples
+
+### TypeScript/JavaScript
+
+```typescript
+// Get companies
+const companies = await fetch('http://localhost:8000/api/companies?industry=Technology', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+}).then(r => r.json())
+
+// Create company
+const newCompany = await fetch('http://localhost:8000/api/companies', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Acme Corp',
+    industry: 'Technology',
+    revenue: 10000000
+  })
+}).then(r => r.json())
+```
+
+### Python
+
+```python
+import requests
+
+headers = {'Authorization': f'Bearer {token}'}
+
+# Get companies
+response = requests.get(
+    'http://localhost:8000/api/companies',
+    headers=headers,
+    params={'industry': 'Technology'}
+)
+companies = response.json()
+
+# Create company
+response = requests.post(
+    'http://localhost:8000/api/companies',
+    headers=headers,
+    json={
+        'name': 'Acme Corp',
+        'industry': 'Technology',
+        'revenue': 10000000
+    }
+)
+new_company = response.json()
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Contacts API" icon="user" href="/api-reference/contacts">
+    Manage contacts associated with companies
+  </Card>
+  <Card title="Deals API" icon="handshake" href="/api-reference/deals">
+    Track deals and opportunities
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    Upload documents for companies
+  </Card>
+  <Card title="API Introduction" icon="book" href="/api-reference/introduction">
+    General API documentation
+  </Card>
+</CardGroup>

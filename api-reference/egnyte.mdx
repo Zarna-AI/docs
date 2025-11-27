@@ -1,0 +1,61 @@
+---
+title: "Egnyte API"
+description: "Egnyte enterprise file sharing endpoints"
+---
+
+## Overview
+
+The Egnyte API provides endpoints for enterprise file sharing and content governance with Egnyte.
+
+**Base Path**: `/api/egnyte`
+
+## Endpoints
+
+### List Files
+
+```bash
+GET /api/egnyte/files
+```
+
+**Query Parameters**:
+- `path`: Egnyte folder path
+- `company_id`: Associated company
+
+**Response**:
+
+```json
+{
+  "files": [
+    {
+      "id": "egnyte-file-123",
+      "name": "Contract.pdf",
+      "path": "/Shared/Deals/Acme/Contract.pdf",
+      "size": 524288,
+      "modified_at": "2024-01-20T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Sync Folder
+
+```bash
+POST /api/egnyte/sync
+```
+
+### Upload File
+
+```bash
+POST /api/egnyte/upload
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Egnyte Integration" icon="cloud" href="/integrations/egnyte">
+    Setup guide
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    File management
+  </Card>
+</CardGroup>

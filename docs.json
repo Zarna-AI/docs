@@ -1,68 +1,204 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Zarna Documentation",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Getting Started",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Introduction",
             "pages": [
               "index",
               "quickstart",
+              "installation",
               "development"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Architecture Overview",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "getting-started/architecture-overview",
+              "getting-started/tech-stack"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Frontend",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Getting Started",
             "pages": [
-              "api-reference/introduction"
+              "frontend/overview",
+              "frontend/tech-stack",
+              "frontend/project-structure"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "UI & Styling",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "frontend/theme-system",
+              "frontend/components",
+              "frontend/best-practices"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "frontend/features/dashboard",
+              "frontend/features/crm",
+              "frontend/features/reports",
+              "frontend/features/sourcing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Backend",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "backend/overview",
+              "backend/tech-stack",
+              "backend/authentication"
+            ]
+          },
+          {
+            "group": "Core Services",
+            "pages": [
+              "backend/routers",
+              "backend/services/crm-agent",
+              "backend/services/document-processing",
+              "backend/services/email-agent",
+              "backend/services/report-generation",
+              "backend/services/agentic-chat"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "backend/database/overview",
+              "backend/database/schema"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "integrations/oauth-setup"
+            ]
+          },
+          {
+            "group": "Cloud Storage",
+            "pages": [
+              "integrations/google-drive",
+              "integrations/sharepoint",
+              "integrations/egnyte",
+              "integrations/basecamp"
+            ]
+          },
+          {
+            "group": "Productivity",
+            "pages": [
+              "integrations/calendar",
+              "integrations/composio"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "integrations/supabase"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Architecture",
+        "groups": [
+          {
+            "group": "System Design",
+            "pages": [
+              "architecture/system-overview",
+              "architecture/data-flow",
+              "architecture/authentication-flow"
+            ]
+          },
+          {
+            "group": "Core Systems",
+            "pages": [
+              "architecture/crm-system",
+              "architecture/agent-pool",
+              "architecture/agentic-system",
+              "architecture/file-processing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication"
+            ]
+          },
+          {
+            "group": "CRM",
+            "pages": [
+              "api-reference/companies",
+              "api-reference/contacts",
+              "api-reference/deals",
+              "api-reference/interactions",
+              "api-reference/financials",
+              "api-reference/notes"
+            ]
+          },
+          {
+            "group": "File Management",
+            "pages": [
+              "api-reference/files",
+              "api-reference/drive",
+              "api-reference/sharepoint",
+              "api-reference/egnyte",
+              "api-reference/basecamp"
+            ]
+          },
+          {
+            "group": "Communication",
+            "pages": [
+              "api-reference/emails",
+              "api-reference/email-bot",
+              "api-reference/calendar"
+            ]
+          },
+          {
+            "group": "AI & Analytics",
+            "pages": [
+              "api-reference/reports",
+              "api-reference/sourcing",
+              "api-reference/agentic-chat"
+            ]
+          },
+          {
+            "group": "Management",
+            "pages": [
+              "api-reference/staffing",
+              "api-reference/utilities"
             ]
           }
         ]
@@ -71,14 +207,14 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "API Reference",
+          "href": "/api-reference/introduction",
+          "icon": "code"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "GitHub",
+          "href": "https://github.com/zarna",
+          "icon": "github"
         }
       ]
     }
@@ -91,13 +227,13 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@zarna.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://app.zarna.com"
     }
   },
   "contextual": {
@@ -114,9 +250,8 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/zarna",
+      "linkedin": "https://linkedin.com/company/zarna"
     }
   }
 }

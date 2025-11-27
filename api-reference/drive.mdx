@@ -1,0 +1,96 @@
+---
+title: "Google Drive API"
+description: "Google Drive integration and file synchronization"
+---
+
+## Overview
+
+The Drive API provides endpoints for Google Drive integration, file syncing, and document management.
+
+**Base Path**: `/api/drive`
+
+## Endpoints
+
+### List Files
+
+```bash
+GET /api/drive/files
+```
+
+**Query Parameters**:
+- `folder_id`: Drive folder ID to list
+- `company_id`: Filter by associated company
+- `page_size`: Number of files (default: 100)
+
+**Response**:
+
+```json
+{
+  "files": [
+    {
+      "id": "drive-file-123",
+      "name": "Q4_Financial_Report.pdf",
+      "mime_type": "application/pdf",
+      "size": 2048576,
+      "modified_at": "2024-01-20T10:30:00Z",
+      "web_view_link": "https://drive.google.com/file/d/..."
+    }
+  ],
+  "total": 25
+}
+```
+
+### Sync Folder
+
+```bash
+POST /api/drive/sync
+```
+
+**Request Body**:
+
+```json
+{
+  "folder_id": "drive-folder-id",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "sync_mode": "incremental"
+}
+```
+
+**Response**:
+
+```json
+{
+  "synced_files": 12,
+  "new_files": 3,
+  "updated_files": 9,
+  "sync_duration": 8.5
+}
+```
+
+### Upload to Drive
+
+```bash
+POST /api/drive/upload
+```
+
+**Request**: multipart/form-data with file
+
+### Download from Drive
+
+```bash
+GET /api/drive/files/{file_id}/download
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Drive Integration" icon="google" href="/integrations/google-drive">
+    Setup guide
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    File management
+  </Card>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Configure OAuth
+  </Card>
+</CardGroup>

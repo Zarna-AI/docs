@@ -1,0 +1,408 @@
+---
+title: "Email Agent Service"
+description: "Automated email handling with Gmail and Outlook integration"
+---
+
+## Overview
+
+The Email Agent is a microservice that automates email handling, including reading, composing, sending, and responding to emails using AI.
+
+**Location**: `scripts/email_agent_microservice/`
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Email Reading" icon="envelope-open">
+    Fetch and parse emails from Gmail/Outlook
+  </Card>
+  <Card title="AI Composition" icon="pen-to-square">
+    Generate email drafts with Claude
+  </Card>
+  <Card title="Smart Sending" icon="paper-plane">
+    Send emails with tracking
+  </Card>
+  <Card title="Auto-Response" icon="robot">
+    Automated responses based on rules
+  </Card>
+</CardGroup>
+
+## Architecture
+
+### Service Structure
+
+```
+email_agent_microservice/
+├── __init__.py
+├── agent.py              # Main email agent logic
+├── composer.py           # Email composition with AI
+├── reader.py             # Email fetching and parsing
+├── sender.py             # Email sending logic
+├── authentication.py     # OAuth token management
+└── utils.py              # Helper functions
+```
+
+### Email Processing Flow
+
+```
+1. Email Received (Gmail/Outlook)
+   ↓
+2. Webhook triggers backend
+   ↓
+3. Email Agent fetches email
+   ↓
+4. AI analyzes email:
+   - Sender intent
+   - Required action
+   - Priority/urgency
+   ↓
+5. Generate response options
+   ↓
+6. User reviews (manual mode)
+   OR
+   Send automatically (auto mode)
+   ↓
+7. Track in CRM
+```
+
+## Email Composition
+
+### AI-Powered Drafting
+
+```python
+from scripts.email_agent_microservice.composer import EmailComposer
+
+composer = EmailComposer(anthropic_client)
+
+# Generate email
+draft = await composer.compose_email(
+    context={
+        "recipient": "john@acmecorp.com",
+        "company": "Acme Corp",
+        "purpose": "follow_up",
+        "previous_interaction": "Meeting on Jan 15, 2024",
+        "key_points": [
+            "Discussed partnership opportunities",
+            "Shared financial projections",
+            "Scheduled next call"
+        ]
+    },
+    tone="professional",
+    length="medium"
+)
+
+# Returns
+{
+    "subject": "Following up on our partnership discussion",
+    "body": "Hi John,\n\nIt was great meeting with you...",
+    "suggested_send_time": "2024-01-23T09:00:00Z"
+}
+```
+
+### Template Variables
+
+```python
+# Email with variables
+template = """
+Hi {contact_name},
+
+Following up on our discussion about {topic}. Based on our conversation,
+I wanted to share {deliverable}.
+
+Best regards,
+{sender_name}
+"""
+
+# Render
+email = composer.render_template(
+    template,
+    variables={
+        "contact_name": "John",
+        "topic": "Q1 partnership",
+        "deliverable": "the updated proposal",
+        "sender_name": "Jane"
+    }
+)
+```
+
+## Email Reading
+
+### Fetch Emails
+
+```python
+from scripts.email_agent_microservice.reader import EmailReader
+
+reader = EmailReader(composio_client)
+
+# Fetch recent emails
+emails = await reader.fetch_emails(
+    entity_id=user_id,
+    provider="google",
+    filters={
+        "from": "acmecorp.com",
+        "subject_contains": "partnership",
+        "after_date": "2024-01-01",
+        "max_results": 50
+    }
+)
+
+# Returns list of email objects
+[
+    {
+        "id": "email-id-123",
+        "from": "john@acmecorp.com",
+        "to": ["user@example.com"],
+        "subject": "Partnership proposal",
+        "body": "Email content...",
+        "received_at": "2024-01-22T10:30:00Z",
+        "attachments": [...]
+    }
+]
+```
+
+### Email Parsing
+
+```python
+# Parse email into structured data
+parsed = reader.parse_email(email)
+
+{
+    "sender": {
+        "name": "John Doe",
+        "email": "john@acmecorp.com",
+        "company": "Acme Corp"
+    },
+    "intent": "follow_up",
+    "topics": ["partnership", "pricing", "timeline"],
+    "action_items": [
+        "Review proposal",
+        "Schedule call",
+        "Prepare financials"
+    ],
+    "priority": "high",
+    "sentiment": "positive"
+}
+```
+
+## Email Sending
+
+### Send Email
+
+```python
+from scripts.email_agent_microservice.sender import EmailSender
+
+sender = EmailSender(composio_client)
+
+# Send via Gmail
+result = await sender.send_email(
+    entity_id=user_id,
+    provider="google",
+    email={
+        "to": ["john@acmecorp.com"],
+        "subject": "Re: Partnership proposal",
+        "body": "Thanks for your email...",
+        "cc": [],
+        "bcc": [],
+        "attachments": []
+    }
+)
+
+# Returns
+{
+    "sent": true,
+    "message_id": "msg-id-456",
+    "sent_at": "2024-01-22T11:00:00Z"
+}
+```
+
+### Track Sent Emails
+
+```python
+# Save to database for tracking
+supabase.table("emails").insert({
+    "user_id": user_id,
+    "company_id": company_id,
+    "contact_id": contact_id,
+    "subject": email["subject"],
+    "body": email["body"],
+    "direction": "outbound",
+    "status": "sent",
+    "message_id": result["message_id"],
+    "sent_at": result["sent_at"]
+}).execute()
+```
+
+## Operating Modes
+
+### Draft Mode
+
+User reviews all emails before sending:
+
+```python
+# Generate draft
+draft = await composer.compose_email(context)
+
+# Save as draft
+await sender.save_draft(entity_id, draft)
+
+# User reviews in UI
+# User clicks "Send" → send_email()
+```
+
+### Manual Mode
+
+AI suggests responses, user selects:
+
+```python
+# Generate multiple options
+options = await composer.generate_response_options(email, count=3)
+
+# Returns 3 different responses
+# User selects preferred option
+# User can edit before sending
+```
+
+### Auto Mode
+
+Fully automated for specific rules:
+
+```python
+# Auto-response rules
+rules = [
+    {
+        "condition": {"from_domain": "acmecorp.com"},
+        "action": "acknowledge",
+        "template": "auto_acknowledgment"
+    },
+    {
+        "condition": {"subject_contains": "out of office"},
+        "action": "skip"
+    }
+]
+
+# Process inbox automatically
+await agent.process_inbox(entity_id, rules)
+```
+
+## API Integration
+
+### Backend Endpoints
+
+```python
+# api/app/routers/email_bot.py
+
+@router.post("/email_bot/compose")
+async def compose_email(
+    context: EmailContext,
+    user: User = Depends(get_current_user)
+):
+    """
+    Generate email draft with AI
+    """
+    composer = EmailComposer(anthropic)
+    draft = await composer.compose_email(context.dict())
+    return draft
+
+@router.post("/email_bot/send")
+async def send_email(
+    email: EmailSend,
+    user: User = Depends(get_current_user)
+):
+    """
+    Send email via connected OAuth account
+    """
+    sender = EmailSender(composio)
+    result = await sender.send_email(user.id, email.provider, email.dict())
+    return result
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Composio OAuth
+COMPOSIO_API_KEY=your-key
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-config
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-config
+
+# AI for composition
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+
+# Email settings
+EMAIL_MAX_DRAFT_AGE_HOURS=24
+EMAIL_AUTO_RESPONSE_ENABLED=false
+```
+
+## Examples
+
+### Frontend Integration
+
+```typescript
+// Compose email with AI
+async function composeEmail(context: EmailContext) {
+  const response = await fetch('/api/email_bot/compose', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(context)
+  })
+
+  const draft = await response.json()
+  return draft
+}
+
+// Send email
+async function sendEmail(email: EmailData) {
+  const response = await fetch('/api/email_bot/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(email)
+  })
+
+  return response.json()
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Failed to send email">
+    **Causes**:
+    - OAuth token expired
+    - Invalid recipient email
+    - Rate limit exceeded
+
+    **Solutions**:
+    - Reconnect OAuth account
+    - Validate email addresses
+    - Check provider rate limits
+  </Accordion>
+
+  <Accordion title="AI composition taking too long">
+    **Cause**: Large context or complex requirements
+
+    **Solution**:
+    - Reduce context size
+    - Use faster Claude model (haiku)
+    - Implement timeout handling
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Configure Gmail and Outlook OAuth
+  </Card>
+  <Card title="Email Bot API" icon="code" href="/api-reference/email-bot">
+    API endpoint documentation
+  </Card>
+  <Card title="Composio Integration" icon="plug" href="/integrations/composio">
+    Composio platform guide
+  </Card>
+</CardGroup>

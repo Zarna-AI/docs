@@ -1,0 +1,192 @@
+---
+title: "File Processing Pipeline"
+description: "Document extraction and processing architecture"
+---
+
+## Overview
+
+The File Processing Pipeline handles document upload, extraction, OCR, AI analysis, and structured data storage.
+
+## Pipeline Stages
+
+```
+┌─────────────┐
+│   Upload    │ User uploads PDF/DOCX/image
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│   Storage   │ Save to Supabase Storage
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│   Queue     │ Add to processing queue
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│  Docling    │ Extract text, tables, images
+│ Extraction  │
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│    OCR      │ Process scanned documents (if needed)
+│  EasyOCR    │
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│ AI Analysis │ Claude analyzes content
+│   Claude    │ Extracts structured data
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│   Store     │ Save extracted JSON to database
+│  Database   │
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│   Notify    │ Notify frontend of completion
+│  Frontend   │
+└─────────────┘
+```
+
+## Processing Stages
+
+### 1. Upload & Validation
+
+```python
+# Validate file
+if file.size > MAX_FILE_SIZE:
+    raise HTTPException(400, "File too large")
+
+if file.content_type not in ALLOWED_TYPES:
+    raise HTTPException(400, "File type not supported")
+
+# Save to storage
+file_path = await save_to_storage(file)
+```
+
+### 2. Docling Extraction
+
+```python
+from docling import DocumentConverter
+
+converter = DocumentConverter()
+
+# Process document
+result = converter.convert(file_path)
+
+extracted = {
+    'text': result.get_text(),
+    'tables': result.get_tables(),
+    'images': result.get_images(),
+    'metadata': result.get_metadata()
+}
+```
+
+### 3. OCR (Conditional)
+
+```python
+import easyocr
+
+# Check if OCR needed
+if is_scanned_document(file_path):
+    reader = easyocr.Reader(['en'])
+    ocr_results = reader.readtext(file_path)
+
+    # Merge with Docling results
+    extracted['text'] += '\n' + ' '.join([text for _, text, _ in ocr_results])
+```
+
+### 4. AI Analysis
+
+```python
+from anthropic import Anthropic
+
+anthropic = Anthropic()
+
+# Analyze content
+response = anthropic.messages.create(
+    model="claude-3-sonnet-20240229",
+    messages=[{
+        "role": "user",
+        "content": f"Analyze this document and extract structured data:\n\n{extracted['text']}"
+    }]
+)
+
+structured_data = json.loads(response.content[0].text)
+```
+
+### 5. Storage
+
+```python
+# Update file record
+supabase.table("files").update({
+    "processing_status": "completed",
+    "extracted_data": structured_data,
+    "processed_at": datetime.now()
+}).eq("id", file_id).execute()
+```
+
+## Supported Formats
+
+| Format | Extension | Max Size | Processing |
+|--------|-----------|----------|------------|
+| PDF | `.pdf` | 100 MB | Docling + OCR |
+| Word | `.docx` | 50 MB | Docling |
+| PowerPoint | `.pptx` | 50 MB | Docling |
+| Excel | `.xlsx` | 50 MB | Pandas |
+| Images | `.jpg`, `.png` | 20 MB | OCR |
+| HTML | `.html` | 10 MB | Docling |
+
+## Performance
+
+### Typical Processing Times
+
+| Document Type | Size | Time |
+|---------------|------|------|
+| Simple PDF | 1 MB | 5-10s |
+| Complex PDF with tables | 5 MB | 15-30s |
+| Scanned document (OCR) | 10 MB | 30-60s |
+| CIM (100 pages) | 20 MB | 45-90s |
+
+### Optimization
+
+- **Parallel processing**: Multiple files processed concurrently
+- **Batch operations**: Batch API calls to AI services
+- **Caching**: Cache extracted data for re-processing
+- **GPU acceleration**: Use GPU for OCR when available
+
+## Error Handling
+
+```python
+try:
+    result = await process_document(file_path)
+except UnsupportedFormatError:
+    update_status(file_id, "failed", "Unsupported file format")
+except OCRError:
+    update_status(file_id, "failed", "OCR processing failed")
+except AIAnalysisError:
+    # Save raw extraction even if AI fails
+    save_partial_extraction(file_id, raw_data)
+    update_status(file_id, "completed_with_warnings")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Files API" icon="code" href="/api-reference/files">
+    File upload endpoints
+  </Card>
+  <Card title="Document Processing Service" icon="server" href="/backend/services/document-processing">
+    Service implementation
+  </Card>
+  <Card title="System Overview" icon="diagram-project" href="/architecture/system-overview">
+    Complete architecture
+  </Card>
+</CardGroup>

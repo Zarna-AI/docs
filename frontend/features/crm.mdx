@@ -1,0 +1,154 @@
+---
+title: "CRM Interface"
+description: "Company, contact, and deal management interface"
+---
+
+## Overview
+
+The CRM interface provides comprehensive tools for managing companies, contacts, and deals with advanced filtering, search, and AI-powered insights.
+
+## Companies View
+
+### Company List
+
+```typescript
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+
+function CompanyList({ companies }: Props) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Industry</TableHead>
+          <TableHead>Revenue</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {companies.map(company => (
+          <TableRow key={company.id}>
+            <TableCell className="font-medium">{company.name}</TableCell>
+            <TableCell>{company.industry}</TableCell>
+            <TableCell>${(company.revenue / 1000000).toFixed(1)}M</TableCell>
+            <TableCell>
+              <Badge variant={company.status === 'active' ? 'default' : 'secondary'}>
+                {company.status}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <Button variant="ghost" size="sm">View</Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+```
+
+### Company Detail View
+
+```typescript
+function CompanyDetail({ companyId }: Props) {
+  const [company, setCompany] = useState<Company | null>(null)
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">{company.name}</h1>
+          <p className="text-muted-foreground">{company.industry}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+          <Button>
+            <FileText className="mr-2 h-4 w-4" />
+            Generate Report
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts</TabsTrigger>
+          <TabsTrigger value="deals">Deals</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <CompanyOverview company={company} />
+        </TabsContent>
+
+        <TabsContent value="contacts">
+          <ContactsList companyId={companyId} />
+        </TabsContent>
+
+        <TabsContent value="deals">
+          <DealsList companyId={companyId} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+```
+
+## Filtering & Search
+
+```typescript
+function CompanyFilters() {
+  const [filters, setFilters] = useState({
+    industry: '',
+    revenue_min: 0,
+    revenue_max: 0,
+    status: 'all'
+  })
+
+  return (
+    <div className="flex gap-4">
+      <Select value={filters.industry} onValueChange={value => setFilters({...filters, industry: value})}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Industry" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Industries</SelectItem>
+          <SelectItem value="Technology">Technology</SelectItem>
+          <SelectItem value="Healthcare">Healthcare</SelectItem>
+          <SelectItem value="Finance">Finance</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Input
+        type="number"
+        placeholder="Min Revenue"
+        value={filters.revenue_min}
+        onChange={e => setFilters({...filters, revenue_min: Number(e.target.value)})}
+      />
+
+      <Button onClick={() => applyFilters(filters)}>
+        Apply Filters
+      </Button>
+    </div>
+  )
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Companies API" icon="code" href="/api-reference/companies">
+    API documentation
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/frontend/components">
+    Component patterns
+  </Card>
+</CardGroup>

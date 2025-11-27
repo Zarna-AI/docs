@@ -1,0 +1,394 @@
+---
+title: "Agentic Chat API (Zarna AI)"
+description: "Natural language interface to your CRM data with multi-agent AI system"
+---
+
+## Overview
+
+The Agentic Chat API, powering **Zarna AI** (the intelligent chatbot), provides a natural language interface to query and interact with your CRM data using a multi-agent AI system with persistent agent pools for optimal performance.
+
+**Base Path**: `/agentic-chat`
+
+## Key Features
+
+- **Natural Language Queries**: Ask questions in plain English
+- **Multi-Agent System**: Specialized agents for different tasks
+- **Agent Pool**: Pre-warmed agents eliminate 5-11s cold start
+- **Real-time Streaming**: Server-Sent Events for live responses
+- **Context Awareness**: Maintains conversation history
+
+## Endpoints
+
+### Query (Streaming)
+
+Execute a natural language query against your CRM data.
+
+```bash
+POST /agentic-chat/query
+```
+
+**Request Body**:
+
+```json
+{
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "query": "How many active deals do we have in the pipeline?",
+  "chat_id": "bb0e8400-e29b-41d4-a716-446655440666",
+  "pool_options": {
+    "prefer_warm": true,
+    "max_wait_time": 120
+  }
+}
+```
+
+**Parameters**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `company_id` | UUID | No | Context company (optional) |
+| `query` | string | Yes | Natural language query |
+| `chat_id` | UUID | Yes | Conversation ID for context |
+| `pool_options` | object | No | Pool configuration |
+
+**Example Request**:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "query": "Show me all companies in the technology sector",
+    "chat_id": "bb0e8400-e29b-41d4-a716-446655440666"
+  }' \
+  "http://localhost:8000/agentic-chat/query"
+```
+
+**Response** (Server-Sent Events):
+
+```
+data: {"type": "start", "query_id": "cc0e8400-e29b-41d4-a716-446655440777", "timestamp": "2024-01-22T10:30:00Z"}
+
+data: {"type": "agent_start", "agent": "data_retrieval", "task": "Querying companies table"}
+
+data: {"type": "chunk", "content": "I found 42 companies in the technology sector. Here's the breakdown:\n\n"}
+
+data: {"type": "chunk", "content": "**Top Companies by Revenue:**\n1. Acme Corp - $15M\n2. TechStart Inc - $5M\n"}
+
+data: {"type": "data", "companies": [{"id": "...", "name": "Acme Corp", "revenue": 15000000}]}
+
+data: {"type": "agent_complete", "agent": "data_retrieval", "duration": 2.3}
+
+data: {"type": "complete", "query_id": "cc0e8400-e29b-41d4-a716-446655440777", "total_time": 3.8}
+```
+
+### System Health
+
+Check agent pool system health.
+
+```bash
+GET /agentic-chat/pools/health
+```
+
+**Response**:
+
+```json
+{
+  "total_pools": 5,
+  "healthy_pools": 5,
+  "degraded_pools": 0,
+  "failed_pools": 0,
+  "active_queries": 3,
+  "total_queries_processed": 1247,
+  "avg_response_time_seconds": 3.2,
+  "uptime_hours": 48.5
+}
+```
+
+### Pool Status
+
+Get status for a specific firm's agent pool.
+
+```bash
+GET /agentic-chat/pools/{firm_id}/status
+```
+
+**Response**:
+
+```json
+{
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222",
+  "status": "healthy",
+  "warm_agents": 3,
+  "queued_requests": 1,
+  "active_requests": 2,
+  "total_processed": 156,
+  "avg_response_time": 3.5,
+  "last_activity": "2024-01-22T10:29:45Z",
+  "created_at": "2024-01-20T08:00:00Z"
+}
+```
+
+**Status Values**:
+- `healthy`: Operating normally
+- `degraded`: Some agents unavailable
+- `failed`: Pool not operational
+- `initializing`: Starting up
+
+### Restart Pool
+
+Manually restart a firm's agent pool.
+
+```bash
+POST /agentic-chat/pools/{firm_id}/restart
+```
+
+**Response**:
+
+```json
+{
+  "message": "Pool restarted successfully",
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222",
+  "status": "initializing"
+}
+```
+
+### Performance Metrics
+
+Get aggregated performance metrics.
+
+```bash
+GET /agentic-chat/metrics
+```
+
+**Response**:
+
+```json
+{
+  "queries": {
+    "total": 1247,
+    "successful": 1198,
+    "failed": 49,
+    "success_rate": 0.961
+  },
+  "performance": {
+    "avg_response_time": 3.2,
+    "p50_response_time": 2.8,
+    "p95_response_time": 5.1,
+    "p99_response_time": 8.3
+  },
+  "pools": {
+    "total": 5,
+    "healthy": 5,
+    "avg_pool_size": 2.8
+  },
+  "period": {
+    "start": "2024-01-20T08:00:00Z",
+    "end": "2024-01-22T10:30:00Z"
+  }
+}
+```
+
+## Event Types
+
+### Streaming Events
+
+| Event | Description | Data Fields |
+|-------|-------------|-------------|
+| `start` | Query processing started | query_id, timestamp |
+| `agent_start` | Agent begins task | agent, task |
+| `chunk` | Content chunk | content |
+| `data` | Structured data | varies by query |
+| `agent_complete` | Agent finishes | agent, duration |
+| `complete` | Query complete | query_id, total_time |
+| `error` | Error occurred | message, error_code |
+
+## Frontend Integration
+
+### React Hook for Streaming
+
+```typescript
+import { useState, useCallback } from 'react'
+
+export function useAgenticChat() {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isStreaming, setIsStreaming] = useState(false)
+
+  const sendQuery = useCallback(async (query: string, chatId: string) => {
+    setIsStreaming(true)
+
+    const response = await fetch('http://localhost:8000/agentic-chat/query', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify({
+        query,
+        chat_id: chatId
+      })
+    })
+
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+    let currentMessage = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value)
+      const lines = chunk.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6))
+
+          if (data.type === 'chunk') {
+            currentMessage += data.content
+            setMessages(prev => {
+              const newMessages = [...prev]
+              if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant') {
+                newMessages[newMessages.length - 1].content = currentMessage
+              } else {
+                newMessages.push({ role: 'assistant', content: currentMessage })
+              }
+              return newMessages
+            })
+          } else if (data.type === 'complete') {
+            setIsStreaming(false)
+          }
+        }
+      }
+    }
+  }, [])
+
+  return { messages, isStreaming, sendQuery }
+}
+```
+
+### Python
+
+```python
+import requests
+import json
+
+def stream_query(query: str, chat_id: str, token: str):
+    """
+    Stream agentic chat query
+    """
+    response = requests.post(
+        'http://localhost:8000/agentic-chat/query',
+        headers={
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+        },
+        json={
+            'query': query,
+            'chat_id': chat_id
+        },
+        stream=True
+    )
+
+    for line in response.iter_lines():
+        if line:
+            line = line.decode('utf-8')
+            if line.startswith('data: '):
+                data = json.loads(line[6:])
+
+                if data['type'] == 'chunk':
+                    print(data['content'], end='', flush=True)
+                elif data['type'] == 'complete':
+                    print(f"\n\nQuery completed in {data['total_time']}s")
+```
+
+## Example Queries
+
+### Data Retrieval
+
+```
+"Show me all companies in healthcare with revenue over $10M"
+"List active deals in the pipeline stage"
+"Find contacts at Acme Corp who are executives"
+```
+
+### Analytics
+
+```
+"What's the average deal size for Q4 2024?"
+"Calculate revenue growth year-over-year"
+"Show me conversion rates by deal stage"
+```
+
+### Operations
+
+```
+"Create a new company called NewCo in the software industry"
+"Update the status of Deal X to closed-won"
+"Add a note to the Acme Corp account"
+```
+
+### Complex Queries
+
+```
+"Compare the top 5 companies by revenue and show their deal pipeline"
+"Analyze our fastest-closing deals and identify common patterns"
+"Generate a summary of all interactions with tech companies this month"
+```
+
+## Performance
+
+### With Agent Pool
+
+- **First query (cold firm)**: ~7-8 seconds
+- **Subsequent queries (warm pool)**: ~3-4 seconds
+- **Peak throughput**: ~10 queries/second
+- **Concurrent users**: Supports 100+ simultaneous users
+
+### Without Agent Pool (Legacy)
+
+- **Every query**: ~12-15 seconds (5-11s cold start + 7s execution)
+
+<Card title="Agent Pool Architecture" icon="bolt" href="/architecture/agent-pool">
+  Learn about performance optimization
+</Card>
+
+## Error Handling
+
+| Code | Error | Description |
+|------|-------|-------------|
+| 400 | `invalid_query` | Query cannot be understood |
+| 401 | `unauthorized` | Authentication required |
+| 404 | `chat_not_found` | Chat ID doesn't exist |
+| 422 | `query_failed` | Query execution error |
+| 429 | `rate_limit_exceeded` | Too many requests |
+| 503 | `pool_unavailable` | Agent pool not ready |
+
+**Error Response**:
+
+```json
+{
+  "detail": "Failed to execute query",
+  "error_code": "query_failed",
+  "message": "Could not find company with that name"
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Pool System" icon="bolt" href="/architecture/agent-pool">
+    Performance optimization architecture
+  </Card>
+  <Card title="Agentic System" icon="users" href="/architecture/agentic-system">
+    Multi-agent orchestration
+  </Card>
+  <Card title="Backend Service" icon="server" href="/backend/services/agentic-chat">
+    Service implementation details
+  </Card>
+  <Card title="CRM Agent" icon="robot" href="/backend/services/crm-agent">
+    CRM-specific agent capabilities
+  </Card>
+</CardGroup>

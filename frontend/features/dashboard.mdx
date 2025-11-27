@@ -1,0 +1,212 @@
+---
+title: "Dashboard"
+description: "Main dashboard with metrics, widgets, and quick actions"
+---
+
+## Overview
+
+The Dashboard is the main landing page after login, providing an overview of key metrics, recent activity, and quick actions.
+
+**Route**: `/dashboard`
+
+## Key Components
+
+### Metrics Cards
+
+Display key performance indicators:
+
+```typescript
+<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        Total Companies
+      </CardTitle>
+      <Building2 className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">142</div>
+      <p className="text-xs text-muted-foreground">
+        +12% from last month
+      </p>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        Active Deals
+      </CardTitle>
+      <DollarSign className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">$2.4M</div>
+      <p className="text-xs text-muted-foreground">
+        32 deals in pipeline
+      </p>
+    </CardContent>
+  </Card>
+</div>
+```
+
+### Recent Activity Feed
+
+```typescript
+<Card>
+  <CardHeader>
+    <CardTitle>Recent Activity</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {activities.map(activity => (
+        <div key={activity.id} className="flex items-center">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback>{activity.user.initials}</AvatarFallback>
+          </Avatar>
+          <div className="ml-4 space-y-1">
+            <p className="text-sm font-medium leading-none">
+              {activity.description}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {formatDistanceToNow(activity.created_at)} ago
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
+```
+
+### Quick Actions
+
+```typescript
+<Card>
+  <CardHeader>
+    <CardTitle>Quick Actions</CardTitle>
+  </CardHeader>
+  <CardContent className="grid gap-4 md:grid-cols-2">
+    <Button className="justify-start" variant="outline">
+      <Plus className="mr-2 h-4 w-4" />
+      New Company
+    </Button>
+    <Button className="justify-start" variant="outline">
+      <Upload className="mr-2 h-4 w-4" />
+      Upload Document
+    </Button>
+    <Button className="justify-start" variant="outline">
+      <FileText className="mr-2 h-4 w-4" />
+      Generate Report
+    </Button>
+    <Button className="justify-start" variant="outline">
+      <Search className="mr-2 h-4 w-4" />
+      Source Companies
+    </Button>
+  </CardContent>
+</Card>
+```
+
+## Data Fetching
+
+### Dashboard API
+
+```typescript
+// services/dashboard-api.ts
+export async function getDashboardMetrics() {
+  const response = await fetch('/api/dashboard/metrics', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+
+  return response.json()
+}
+
+export async function getRecentActivity(limit = 10) {
+  const response = await fetch(`/api/dashboard/activity?limit=${limit}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+
+  return response.json()
+}
+```
+
+### React Implementation
+
+```typescript
+function Dashboard() {
+  const [metrics, setMetrics] = useState(null)
+  const [activity, setActivity] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadDashboard() {
+      const [metricsData, activityData] = await Promise.all([
+        getDashboardMetrics(),
+        getRecentActivity()
+      ])
+
+      setMetrics(metricsData)
+      setActivity(activityData)
+      setIsLoading(false)
+    }
+
+    loadDashboard()
+  }, [])
+
+  if (isLoading) return <LoadingSpinner />
+
+  return (
+    <div className="space-y-4">
+      <MetricsCards metrics={metrics} />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <RevenueChart data={metrics.revenue_over_time} />
+        </Card>
+        <Card className="col-span-3">
+          <RecentActivity activities={activity} />
+        </Card>
+      </div>
+    </div>
+  )
+}
+```
+
+## Charts
+
+### Revenue Chart
+
+```typescript
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+
+function RevenueChart({ data }: Props) {
+  return (
+    <ResponsiveContainer width="100%" height={350}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="month" />
+        <YAxis />
+        <Tooltip />
+        <Line
+          type="monotone"
+          dataKey="revenue"
+          stroke="hsl(var(--primary))"
+          strokeWidth={2}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CRM Interface" icon="building" href="/frontend/features/crm">
+    CRM management interface
+  </Card>
+  <Card title="Reports" icon="chart-line" href="/frontend/features/reports">
+    Report generation UI
+  </Card>
+  <Card title="Sourcing" icon="magnifying-glass" href="/frontend/features/sourcing">
+    Company sourcing dashboard
+  </Card>
+</CardGroup>

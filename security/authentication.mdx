@@ -1,0 +1,101 @@
+---
+title: "Authentication Security"
+description: "JWT token security and best practices"
+---
+
+## Overview
+
+Zarna uses JWT (JSON Web Tokens) for API authentication with industry-standard security practices.
+
+## Token Security
+
+### Token Structure
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.    # Header (algorithm, type)
+eyJzdWIiOiJ1c2VyLWlkIiwiZmlybV9pZCI6... # Payload (claims)
+SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c  # Signature
+```
+
+### Secure Storage
+
+<Tabs>
+  <Tab title="Development">
+    **localStorage** is acceptable for development:
+
+    ```typescript
+    localStorage.setItem('access_token', token)
+    ```
+
+    **Risks**: XSS vulnerabilities can access localStorage
+  </Tab>
+
+  <Tab title="Production">
+    **HttpOnly Cookies** are recommended:
+
+    ```python
+    # Backend sets cookie
+    response.set_cookie(
+      "access_token",
+      token,
+      httponly=True,      # Prevents JavaScript access
+      secure=True,        # HTTPS only
+      samesite="strict",  # CSRF protection
+      max_age=86400       # 24 hours
+    )
+    ```
+
+    **Benefits**: Protected from XSS attacks
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use HTTPS in production">
+    Always use HTTPS to prevent token interception
+  </Accordion>
+
+  <Accordion title="Short token expiration">
+    Access tokens: 24 hours max
+    Refresh tokens: 7 days max
+  </Accordion>
+
+  <Accordion title="Strong JWT secrets">
+    Use 256+ bit random secrets:
+
+    ```bash
+    openssl rand -base64 64
+    ```
+  </Accordion>
+
+  <Accordion title="Implement token rotation">
+    Issue new refresh token on each use, invalidate old ones
+  </Accordion>
+
+  <Accordion title="Validate all claims">
+    Check expiration, issuer, audience on every request
+  </Accordion>
+</AccordionGroup>
+
+## OWASP Top 10 Compliance
+
+- ✅ **A01 Broken Access Control**: RLS + JWT
+- ✅ **A02 Cryptographic Failures**: HTTPS + encrypted secrets
+- ✅ **A03 Injection**: Parameterized queries
+- ✅ **A05 Security Misconfiguration**: Secure defaults
+- ✅ **A07 Identification & Auth Failures**: JWT + OAuth
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OAuth Security" icon="key" href="/security/oauth-security">
+    OAuth best practices
+  </Card>
+  <Card title="API Security" icon="shield" href="/security/api-security">
+    API protection
+  </Card>
+  <Card title="Auth Flow" icon="diagram-next" href="/architecture/authentication-flow">
+    Authentication patterns
+  </Card>
+</CardGroup>

@@ -1,0 +1,235 @@
+---
+title: "Data Protection"
+description: "Row Level Security, encryption, and data privacy"
+---
+
+## Overview
+
+Zarna implements multi-layered data protection using Row Level Security (RLS), encryption, and strict access controls.
+
+## Row Level Security (RLS)
+
+### Firm-Level Isolation
+
+Every table has RLS policies ensuring users only access their firm's data:
+
+```sql
+-- Example: Companies table
+CREATE POLICY "firm_isolation_policy"
+ON companies
+FOR ALL
+USING (
+  firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  )
+);
+```
+
+**Benefits**:
+- **Defense in depth**: Even if application logic fails, RLS protects data
+- **Zero trust**: Database enforces isolation, not application
+- **Audit trail**: PostgreSQL logs all access attempts
+
+### Policy Examples
+
+<Tabs>
+  <Tab title="Read Policy">
+    ```sql
+    CREATE POLICY "users_can_view_firm_data"
+    ON companies
+    FOR SELECT
+    USING (firm_id IN (SELECT firm_id FROM users WHERE id = auth.uid()));
+    ```
+  </Tab>
+
+  <Tab title="Write Policy">
+    ```sql
+    CREATE POLICY "users_can_insert_firm_data"
+    ON companies
+    FOR INSERT
+    WITH CHECK (firm_id IN (SELECT firm_id FROM users WHERE id = auth.uid()));
+    ```
+  </Tab>
+
+  <Tab title="Role-Based Policy">
+    ```sql
+    CREATE POLICY "admins_only_delete"
+    ON companies
+    FOR DELETE
+    USING (
+      firm_id IN (
+        SELECT firm_id FROM users
+        WHERE id = auth.uid() AND role = 'admin'
+      )
+    );
+    ```
+  </Tab>
+</Tabs>
+
+## Encryption
+
+### At Rest
+
+- **Database**: Supabase encrypts all data at rest with AES-256
+- **File Storage**: S3-compatible storage with server-side encryption
+- **Secrets**: Environment variables encrypted in deployment platform
+
+### In Transit
+
+- **HTTPS/TLS 1.3**: All API communication encrypted
+- **Certificate Pinning**: Mobile apps (future)
+- **Mutual TLS**: Service-to-service communication (future)
+
+### Application-Level Encryption
+
+For sensitive fields (SSN, credit cards):
+
+```python
+from cryptography.fernet import Fernet
+
+# Generate key
+key = Fernet.generate_key()
+cipher = Fernet(key)
+
+# Encrypt
+encrypted = cipher.encrypt(sensitive_data.encode())
+
+# Decrypt
+decrypted = cipher.decrypt(encrypted).decode()
+
+# Store in database
+supabase.table("sensitive_data").insert({
+    "user_id": user_id,
+    "encrypted_field": encrypted.decode(),
+    "encryption_version": "v1"
+}).execute()
+```
+
+## Access Control
+
+### Role-Based Access Control (RBAC)
+
+```python
+# User roles
+ROLES = {
+    "admin": {
+        "can_delete": True,
+        "can_edit_all": True,
+        "can_view_all": True
+    },
+    "user": {
+        "can_delete": False,
+        "can_edit_own": True,
+        "can_view_firm": True
+    },
+    "viewer": {
+        "can_delete": False,
+        "can_edit": False,
+        "can_view_firm": True
+    }
+}
+
+# Check permission
+def check_permission(user: User, action: str, resource: str):
+    if not ROLES[user.role].get(f"can_{action}"):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+```
+
+## Data Retention
+
+### Automatic Cleanup
+
+```sql
+-- Delete old activity logs (>90 days)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+SELECT cron.schedule(
+    'cleanup-old-logs',
+    '0 2 * * *',  -- Daily at 2 AM
+    $$DELETE FROM activity_logs WHERE created_at < NOW() - INTERVAL '90 days'$$
+);
+```
+
+### Soft Deletes
+
+```sql
+-- Add deleted_at column
+ALTER TABLE companies ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+
+-- Soft delete
+UPDATE companies SET deleted_at = NOW() WHERE id = company_id;
+
+-- Exclude deleted from queries
+SELECT * FROM companies WHERE deleted_at IS NULL;
+```
+
+## Compliance
+
+### GDPR Compliance
+
+<AccordionGroup>
+  <Accordion title="Right to Access">
+    Users can export all their data via `/api/users/export-data`
+  </Accordion>
+
+  <Accordion title="Right to Erasure">
+    Complete data deletion via `/api/users/delete-account`
+  </Accordion>
+
+  <Accordion title="Data Portability">
+    Export data in JSON format for transfer to other systems
+  </Accordion>
+
+  <Accordion title="Consent Management">
+    Track user consents in database with audit trail
+  </Accordion>
+</AccordionGroup>
+
+### SOC 2 Compliance
+
+- Audit logging for all sensitive operations
+- Access control reviews
+- Encryption at rest and in transit
+- Regular security assessments
+
+## Monitoring
+
+### Security Events
+
+```python
+# Log security events
+security_logger.warning(
+    f"FAILED_LOGIN_ATTEMPT: email={email} ip={ip} timestamp={now}"
+)
+
+security_logger.critical(
+    f"MULTIPLE_FAILED_LOGINS: email={email} count={5} ip={ip}"
+)
+
+security_logger.info(
+    f"DATA_ACCESS: user={user_id} table={table} action={action}"
+)
+```
+
+### Alerts
+
+Set up alerts for:
+- Multiple failed login attempts
+- Unusual access patterns
+- Large data exports
+- Permission changes
+- RLS policy violations
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/security/authentication">
+    JWT security
+  </Card>
+  <Card title="OAuth Security" icon="key" href="/security/oauth-security">
+    OAuth best practices
+  </Card>
+  <Card title="API Security" icon="shield" href="/security/api-security">
+    API protection
+  </Card>
+</CardGroup>

@@ -1,94 +1,441 @@
 ---
-title: 'Development'
-description: 'Preview changes locally to update your docs'
+title: 'Development Workflow'
+description: 'Local development setup and best practices for Zarna'
 ---
 
+## Prerequisites
+
 <Info>
-  **Prerequisites**:
-  - Node.js version 19 or higher
-  - A docs repository with a `docs.json` file
+  **Required**:
+  - Node.js 18+ (for frontend)
+  - Python 3.8+ (for backend)
+  - Supabase account
+  - API keys (Anthropic, Composio, etc.)
 </Info>
 
-Follow these steps to install and run Mintlify on your operating system.
+## Development Environment Setup
+
+### Backend Development
 
 <Steps>
-<Step title="Install the Mintlify CLI">
+<Step title="Navigate to backend directory">
+
+```bash
+cd zarna-backend
+```
+
+</Step>
+
+<Step title="Activate virtual environment">
+
+```bash
+# Create venv if not exists
+python -m venv zarna_env
+
+# Activate
+source zarna_env/bin/activate  # macOS/Linux
+# or
+zarna_env\Scripts\activate  # Windows
+```
+
+</Step>
+
+<Step title="Install dependencies">
+
+```bash
+pip install -r requirements.txt
+```
+
+</Step>
+
+<Step title="Configure environment">
+
+Create `.env` file with required variables (see [Installation Guide](/installation#configure-environment-variables))
+
+</Step>
+
+<Step title="Start development server">
+
+```bash
+cd api
+python run.py
+```
+
+Server runs on **http://localhost:8000** with auto-reload enabled.
+
+</Step>
+</Steps>
+
+### Frontend Development
+
+<Steps>
+<Step title="Navigate to frontend directory">
+
+```bash
+cd zarna-frontend
+```
+
+</Step>
+
+<Step title="Install dependencies">
+
+```bash
+npm install
+```
+
+</Step>
+
+<Step title="Configure environment">
+
+Create `.env.local` file:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+</Step>
+
+<Step title="Start development server">
+
+```bash
+npm run dev
+```
+
+Server runs on **http://localhost:3000** with hot module replacement.
+
+</Step>
+</Steps>
+
+## Documentation Development
+
+<Steps>
+<Step title="Install Mintlify CLI">
 
 ```bash
 npm i -g mint
 ```
+
 </Step>
 
-<Step title="Preview locally">
+<Step title="Navigate to docs directory">
 
-Navigate to your docs directory where your `docs.json` file is located, and run the following command:
+```bash
+cd docs
+```
+
+</Step>
+
+<Step title="Start preview server">
 
 ```bash
 mint dev
 ```
 
-A local preview of your documentation will be available at `http://localhost:3000`.
+Preview available at **http://localhost:3000** (or 3001 if 3000 is in use).
+
+<Tip>Your preview updates automatically as you edit MDX files.</Tip>
 
 </Step>
 </Steps>
 
-## Custom ports
+## Development Workflow
 
-By default, Mintlify uses port 3000. You can customize the port Mintlify runs on by using the `--port` flag. For example, to run Mintlify on port 3333, use this command:
+### Typical Day
+
+1. **Start both servers**:
+   ```bash
+   # Terminal 1: Backend
+   cd zarna-backend/api && python run.py
+
+   # Terminal 2: Frontend
+   cd zarna-frontend && npm run dev
+   ```
+
+2. **Make code changes**:
+   - Edit files in your IDE
+   - Both servers auto-reload on changes
+
+3. **Test changes**:
+   - Use frontend UI at http://localhost:3000
+   - Use API docs at http://localhost:8000/docs
+   - Monitor terminal logs for errors
+
+4. **Update documentation**:
+   - Edit corresponding `.mdx` files in `/docs`
+   - Preview with `mint dev` in docs folder
+   - Commit docs with code changes
+
+### Hot Reload
+
+- **Frontend**: Vite HMR updates in <100ms
+- **Backend**: Uvicorn reloads on file changes (~1-2s)
+- **Docs**: Mintlify updates instantly
+
+## Code Quality
+
+### Frontend
 
 ```bash
-mint dev --port 3333
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+
+# Check formatting
+npm run format:check
+
+# Type check
+npm run build  # Runs tsc
 ```
 
-If you attempt to run Mintlify on a port that's already in use, it will use the next available port:
-
-```md
-Port 3000 is already in use. Trying 3001 instead.
-```
-
-## Mintlify versions
-
-Please note that each CLI release is associated with a specific version of Mintlify. If your local preview does not align with the production version, please update the CLI:
+### Backend
 
 ```bash
-npm mint update
+# Format with Black
+black scripts/ api/
+
+# Type check (optional)
+mypy scripts/ api/
+
+# Lint (optional)
+pylint scripts/ api/
 ```
 
-## Validating links
+## Testing
 
-The CLI can assist with validating links in your documentation. To identify any broken links, use the following command:
+### Frontend Tests (Future)
 
 ```bash
-mint broken-links
+# Run tests
+npm test
+
+# Watch mode
+npm test -- --watch
+
+# Coverage
+npm test -- --coverage
 ```
 
-## Deployment
+### Backend Tests (Future)
 
-If the deployment is successful, you should see the following:
+```bash
+# Run pytest
+pytest
 
-<Frame>
-  <img src="/images/checks-passed.png" alt="Screenshot of a deployment confirmation message that says All checks have passed." style={{ borderRadius: '0.5rem' }} />
-</Frame>
+# Watch mode
+pytest-watch
 
-## Code formatting
+# Coverage
+pytest --cov=scripts --cov=api
+```
 
-We suggest using extensions on your IDE to recognize and format MDX. If you're a VSCode user, consider the [MDX VSCode extension](https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx) for syntax highlighting, and [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for code formatting.
+## Debugging
+
+### Frontend Debugging
+
+1. **React DevTools**: Install browser extension
+2. **Console logs**: Use browser DevTools console
+3. **Network tab**: Monitor API calls
+4. **Vite inspector**: See what's being bundled
+
+### Backend Debugging
+
+1. **Print statements**: Simple `print()` in code
+2. **Logging**: Use Python `logging` module
+3. **Interactive debugger**: Use `pdb` or IDE debugger
+   ```python
+   import pdb; pdb.set_trace()
+   ```
+4. **API docs**: Test endpoints at `/docs`
+
+## Common Development Tasks
+
+### Adding a New Component
+
+```bash
+# Add shadcn component
+cd zarna-frontend
+npx shadcn@latest add dialog
+
+# Component appears in src/components/ui/
+```
+
+### Adding a New API Endpoint
+
+```python
+# 1. Create/edit router in api/app/routers/
+@router.post("/new-endpoint")
+async def new_endpoint(data: RequestModel):
+    # Implementation
+    pass
+
+# 2. Add to main.py if new router
+from app.routers import new_router
+app.include_router(new_router.router)
+
+# 3. Document in /docs/api-reference/
+```
+
+### Adding a New Page
+
+```bash
+# Frontend
+cd zarna-frontend
+# Create component in src/components/
+# Add route in src/App.tsx
+
+# Documentation
+cd docs
+# Create new-page.mdx
+# Add to docs.json navigation
+```
+
+## Environment Management
+
+### Managing Secrets
+
+```bash
+# NEVER commit .env files
+# Use .env.example as template
+
+# Backend .env
+cp .env.example .env
+# Edit .env with real values
+
+# Frontend .env.local
+cp .env.local.example .env.local
+# Edit .env.local with real values
+```
+
+### Different Environments
+
+```bash
+# Development
+NODE_ENV=development
+NEXT_PUBLIC_ENV=development
+
+# Staging
+NODE_ENV=production
+NEXT_PUBLIC_ENV=staging
+
+# Production
+NODE_ENV=production
+NEXT_PUBLIC_ENV=production
+```
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title='Error: Could not load the "sharp" module using the darwin-arm64 runtime'>
-
-    This may be due to an outdated version of node. Try the following:
-    1. Remove the currently-installed version of the CLI: `npm remove -g mint`
-    2. Upgrade to Node v19 or higher.
-    3. Reinstall the CLI: `npm i -g mint`
+  <Accordion title="Backend won't start">
+    **Solutions**:
+    - Check Python version: `python --version` (need 3.8+)
+    - Verify virtual environment activated
+    - Reinstall dependencies: `pip install -r requirements.txt`
+    - Check `.env` file exists and has required variables
   </Accordion>
 
-  <Accordion title="Issue: Encountering an unknown error">
-  
-    Solution: Go to the root of your device and delete the `~/.mintlify` folder. Then run `mint dev` again.
+  <Accordion title="Frontend won't start">
+    **Solutions**:
+    - Check Node version: `node --version` (need 18+)
+    - Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
+    - Clear Vite cache: `rm -rf node_modules/.vite`
+    - Check `.env.local` exists
+  </Accordion>
+
+  <Accordion title="CORS errors">
+    **Solution**:
+    - Ensure backend running on `localhost:8000`
+    - Ensure frontend running on `localhost:3000` or `3001`
+    - Check CORS middleware in `api/app/main.py` includes your frontend URL
+  </Accordion>
+
+  <Accordion title="Database connection errors">
+    **Solution**:
+    - Verify `SUPABASE_URL` and `SUPABASE_KEY` in `.env`
+    - Check Supabase project is not paused (free tier)
+    - Test connection: `curl https://your-project.supabase.co/rest/v1/`
   </Accordion>
 </AccordionGroup>
 
-Curious about what changed in the latest CLI version? Check out the [CLI changelog](https://www.npmjs.com/package/mintlify?activeTab=versions).
+## Documentation Updates
+
+### When You Make Changes
+
+**ALWAYS update documentation alongside code**:
+
+```bash
+# Example: Added new API endpoint
+git add api/app/routers/deals.py
+git add docs/api-reference/deals.mdx
+git commit -m "feat: add deals API endpoint with documentation"
+```
+
+### Documentation Standards
+
+See the [Documentation Maintenance](/CLAUDE#documentation-maintenance) section in CLAUDE.md for complete guidelines.
+
+**Key Points**:
+- Update docs in same commit as code
+- Use Mintlify components (Card, Tip, Warning, etc.)
+- Include code examples with language tags
+- Test examples before committing
+- Preview with `mint dev` before pushing
+
+## Git Workflow
+
+### Branching Strategy
+
+```bash
+# Create feature branch
+git checkout -b feature/new-feature
+
+# Make changes
+# Commit frequently
+
+# Push to remote
+git push -u origin feature/new-feature
+
+# Create PR when ready
+```
+
+### Commit Messages
+
+Use conventional commits:
+
+```bash
+feat: add new feature
+fix: resolve bug
+docs: update documentation
+style: formatting changes
+refactor: code restructuring
+test: add tests
+chore: maintenance tasks
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get started quickly
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Detailed installation guide
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/getting-started/architecture-overview">
+    Understand the system
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore the API
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com)
+- [React Documentation](https://react.dev)
+- [Vite Documentation](https://vitejs.dev)
+- [Mintlify Documentation](https://mintlify.com/docs)
+- [Supabase Documentation](https://supabase.com/docs)

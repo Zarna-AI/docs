@@ -1,0 +1,67 @@
+---
+title: "Basecamp Integration"
+description: "Project management and file sync with Basecamp"
+---
+
+## Overview
+
+The Basecamp integration syncs project files and documents from Basecamp to your Zarna CRM.
+
+**Router**: `api/app/routers/basecamp.py`
+**Service**: `scripts/basecamp_service/`
+
+## Features
+
+- OAuth authentication with Basecamp
+- Project file syncing
+- Document tracking
+- Activity monitoring
+
+## Setup
+
+### 1. Connect Basecamp
+
+```bash
+POST /api/basecamp/oauth/init
+```
+
+### 2. Select Projects
+
+```bash
+POST /api/basecamp/sync-projects
+{
+  "project_ids": ["123456"],
+  "company_id": "uuid"
+}
+```
+
+## API Endpoints
+
+### List Projects
+
+```bash
+GET /api/basecamp/projects
+```
+
+### List Files
+
+```bash
+GET /api/basecamp/files?project_id=123456
+```
+
+### Sync Project
+
+```bash
+POST /api/basecamp/sync/{project_id}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Basecamp API" icon="code" href="/api-reference/basecamp">
+    API documentation
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    File management
+  </Card>
+</CardGroup>

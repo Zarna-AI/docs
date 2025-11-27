@@ -1,0 +1,319 @@
+---
+title: "Database Overview"
+description: "Supabase PostgreSQL integration and data architecture"
+---
+
+## Overview
+
+Zarna uses **Supabase** (managed PostgreSQL) for all persistent data storage with Row Level Security (RLS) for firm-level isolation.
+
+## Database Structure
+
+### Core Tables
+
+<CardGroup cols={2}>
+  <Card title="CRM Tables" icon="building">
+    companies, contacts, deals, interactions, financials, notes
+  </Card>
+  <Card title="User Management" icon="users">
+    users, firms, roles, permissions
+  </Card>
+  <Card title="File Management" icon="file">
+    files, file_processing_status, extracted_data
+  </Card>
+  <Card title="Integration Data" icon="plug">
+    email_oauth_tokens, email_config, sync_status
+  </Card>
+  <Card title="Analytics" icon="chart-line">
+    reports, queries, usage_metrics
+  </Card>
+  <Card title="Communication" icon="envelope">
+    emails, email_threads, calendar_events
+  </Card>
+</CardGroup>
+
+## Key Tables
+
+### Companies
+
+```sql
+CREATE TABLE companies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  firm_id UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  industry TEXT,
+  revenue NUMERIC,
+  ebitda NUMERIC,
+  employees INTEGER,
+  founded_year INTEGER,
+  location TEXT,
+  website TEXT,
+  description TEXT,
+  status TEXT CHECK (status IN ('active', 'inactive', 'archived')) DEFAULT 'active',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by UUID REFERENCES users(id)
+);
+
+-- Indexes
+CREATE INDEX idx_companies_firm_id ON companies(firm_id);
+CREATE INDEX idx_companies_industry ON companies(industry);
+CREATE INDEX idx_companies_status ON companies(status);
+CREATE INDEX idx_companies_name ON companies(name);
+
+-- Full-text search
+CREATE INDEX idx_companies_search ON companies USING GIN(to_tsvector('english', name || ' ' || COALESCE(description, '')));
+```
+
+### Contacts
+
+```sql
+CREATE TABLE contacts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  firm_id UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  role TEXT,
+  linkedin TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_contacts_firm_id ON contacts(firm_id);
+CREATE INDEX idx_contacts_company_id ON contacts(company_id);
+CREATE INDEX idx_contacts_email ON contacts(email);
+```
+
+### Deals
+
+```sql
+CREATE TABLE deals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  firm_id UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  value NUMERIC,
+  stage TEXT CHECK (stage IN ('lead', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost')),
+  probability INTEGER CHECK (probability >= 0 AND probability <= 100),
+  owner_id UUID REFERENCES users(id),
+  close_date DATE,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_deals_firm_id ON deals(firm_id);
+CREATE INDEX idx_deals_company_id ON deals(company_id);
+CREATE INDEX idx_deals_stage ON deals(stage);
+CREATE INDEX idx_deals_owner_id ON deals(owner_id);
+CREATE INDEX idx_deals_close_date ON deals(close_date);
+```
+
+### Files
+
+```sql
+CREATE TABLE files (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  firm_id UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  size BIGINT,
+  content_type TEXT,
+  document_type TEXT,
+  storage_path TEXT NOT NULL,
+  processing_status TEXT DEFAULT 'pending' CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+  processing_progress INTEGER DEFAULT 0,
+  extracted_data JSONB,
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  processed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Indexes
+CREATE INDEX idx_files_firm_id ON files(firm_id);
+CREATE INDEX idx_files_company_id ON files(company_id);
+CREATE INDEX idx_files_status ON files(processing_status);
+```
+
+## Row Level Security (RLS)
+
+### Firm-Level Isolation
+
+All tables use RLS to ensure users only access their firm's data:
+
+```sql
+-- Enable RLS
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for firm isolation
+CREATE POLICY "firm_isolation_policy"
+ON companies
+FOR ALL
+USING (
+  firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  )
+);
+```
+
+### Policy Types
+
+<Tabs>
+  <Tab title="SELECT Policy">
+    ```sql
+    CREATE POLICY "users_can_view_firm_companies"
+    ON companies
+    FOR SELECT
+    USING (
+      firm_id IN (
+        SELECT firm_id FROM users WHERE id = auth.uid()
+      )
+    );
+    ```
+  </Tab>
+
+  <Tab title="INSERT Policy">
+    ```sql
+    CREATE POLICY "users_can_create_firm_companies"
+    ON companies
+    FOR INSERT
+    WITH CHECK (
+      firm_id IN (
+        SELECT firm_id FROM users WHERE id = auth.uid()
+      )
+    );
+    ```
+  </Tab>
+
+  <Tab title="UPDATE Policy">
+    ```sql
+    CREATE POLICY "users_can_update_firm_companies"
+    ON companies
+    FOR UPDATE
+    USING (
+      firm_id IN (
+        SELECT firm_id FROM users WHERE id = auth.uid()
+      )
+    );
+    ```
+  </Tab>
+
+  <Tab title="DELETE Policy">
+    ```sql
+    CREATE POLICY "admins_can_delete_companies"
+    ON companies
+    FOR DELETE
+    USING (
+      firm_id IN (
+        SELECT firm_id FROM users
+        WHERE id = auth.uid() AND role = 'admin'
+      )
+    );
+    ```
+  </Tab>
+</Tabs>
+
+## Relationships
+
+### Entity Relationships
+
+```
+firms (1) ─────────< (∞) users
+  │
+  ├─────────< (∞) companies
+  │              │
+  │              ├─────────< (∞) contacts
+  │              ├─────────< (∞) deals
+  │              ├─────────< (∞) files
+  │              └─────────< (∞) interactions
+  │
+  ├─────────< (∞) deals
+  └─────────< (∞) files
+```
+
+### Foreign Key Constraints
+
+```sql
+-- Cascade deletes
+ALTER TABLE companies
+  ADD CONSTRAINT fk_firm
+  FOREIGN KEY (firm_id)
+  REFERENCES firms(id)
+  ON DELETE CASCADE;
+
+-- Nullify on delete
+ALTER TABLE deals
+  ADD CONSTRAINT fk_company
+  FOREIGN KEY (company_id)
+  REFERENCES companies(id)
+  ON DELETE SET NULL;
+```
+
+## Triggers
+
+### Auto-Update Timestamps
+
+```sql
+-- Function to update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for companies
+CREATE TRIGGER update_companies_updated_at
+  BEFORE UPDATE ON companies
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always include firm_id">
+    All queries must filter by firm_id for proper isolation
+  </Accordion>
+
+  <Accordion title="Use indexes on foreign keys">
+    ```sql
+    CREATE INDEX idx_table_firm_id ON table_name(firm_id);
+    ```
+  </Accordion>
+
+  <Accordion title="Enable RLS on all tables">
+    Defense in depth - don't rely on application logic alone
+  </Accordion>
+
+  <Accordion title="Use transactions for multi-table operations">
+    ```python
+    # Ensure atomicity
+    async with supabase.transaction():
+        # Multiple operations
+        pass
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="table" href="/backend/database/schema">
+    Complete schema documentation
+  </Card>
+  <Card title="Supabase Integration" icon="database" href="/integrations/supabase">
+    Setup and configuration
+  </Card>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    Backend architecture
+  </Card>
+  <Card title="Data Protection" icon="shield" href="/security/data-protection">
+    Security and RLS policies
+  </Card>
+</CardGroup>

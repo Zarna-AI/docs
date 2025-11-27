@@ -1,0 +1,203 @@
+---
+title: "Authentication API"
+description: "User authentication and token management endpoints"
+---
+
+## Overview
+
+The Authentication API handles user login, registration, token refresh, and session management.
+
+**Base Path**: `/auth`
+
+## Endpoints
+
+### Login
+
+```bash
+POST /auth/login
+```
+
+**Request Body**:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+**Response** (200 OK):
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 86400,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "firm_id": "770e8400-e29b-41d4-a716-446655440222",
+    "role": "admin"
+  }
+}
+```
+
+### Register
+
+```bash
+POST /auth/register
+```
+
+**Request Body**:
+
+```json
+{
+  "email": "newuser@example.com",
+  "password": "secure-password",
+  "name": "Jane Smith",
+  "firm_name": "NewCo Ventures"
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "newuser@example.com",
+    "name": "Jane Smith"
+  },
+  "message": "Account created successfully. Please check your email to verify."
+}
+```
+
+### Refresh Token
+
+```bash
+POST /auth/refresh
+```
+
+**Headers**:
+```
+Authorization: Bearer {current_token}
+```
+
+**Response**:
+
+```json
+{
+  "access_token": "new-jwt-token",
+  "token_type": "bearer",
+  "expires_in": 86400
+}
+```
+
+### Logout
+
+```bash
+POST /auth/logout
+```
+
+**Response**:
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+### Get Current User
+
+```bash
+GET /auth/me
+```
+
+**Headers**:
+```
+Authorization: Bearer {token}
+```
+
+**Response**:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222",
+  "firm_name": "Acme Ventures",
+  "role": "admin",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+## Token Structure
+
+### JWT Payload
+
+```json
+{
+  "sub": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222",
+  "role": "admin",
+  "iat": 1706000000,
+  "exp": 1706086400
+}
+```
+
+## Error Codes
+
+| Code | Error | Description |
+|------|-------|-------------|
+| 400 | `invalid_credentials` | Email or password incorrect |
+| 400 | `email_already_exists` | Email already registered |
+| 401 | `token_expired` | JWT token has expired |
+| 401 | `invalid_token` | JWT token is malformed or invalid |
+| 422 | `validation_error` | Request body validation failed |
+
+## Frontend Integration
+
+```typescript
+// Login
+async function login(email: string, password: string) {
+  const response = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
+
+  const data = await response.json()
+
+  // Store token
+  localStorage.setItem('access_token', data.access_token)
+
+  return data.user
+}
+
+// Auto-refresh before expiration
+useEffect(() => {
+  const refreshInterval = setInterval(async () => {
+    const newToken = await refreshToken()
+    localStorage.setItem('access_token', newToken)
+  }, 23 * 60 * 60 * 1000) // 23 hours
+
+  return () => clearInterval(refreshInterval)
+}, [])
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication Flow" icon="diagram-next" href="/architecture/authentication-flow">
+    Complete auth architecture
+  </Card>
+  <Card title="Backend Auth" icon="server" href="/backend/authentication">
+    JWT middleware implementation
+  </Card>
+  <Card title="Security Guide" icon="shield" href="/security/authentication">
+    Security best practices
+  </Card>
+</CardGroup>

@@ -1,0 +1,220 @@
+---
+title: "API Security"
+description: "CORS, rate limiting, validation, and API protection"
+---
+
+## Overview
+
+The Zarna API implements multiple layers of security including CORS policies, rate limiting, input validation, and request authentication.
+
+## CORS Configuration
+
+### Allowed Origins
+
+```python
+# api/app/main.py
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://app.zarna.com"  # Production
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600
+)
+```
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Whitelist specific origins">
+    Never use `allow_origins=["*"]` with `allow_credentials=True`
+  </Accordion>
+
+  <Accordion title="Limit methods">
+    Only allow needed HTTP methods (GET, POST, PATCH, DELETE)
+  </Accordion>
+
+  <Accordion title="Restrict headers">
+    Only expose necessary headers to frontend
+  </Accordion>
+</AccordionGroup>
+
+## Rate Limiting
+
+### Implementation
+
+```python
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+# Apply rate limit
+@router.get("/companies")
+@limiter.limit("100/hour")
+async def get_companies(request: Request):
+    # Endpoint logic
+    pass
+```
+
+### Rate Limit Headers
+
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 87
+X-RateLimit-Reset: 1706086400
+```
+
+## Input Validation
+
+### Pydantic Models
+
+```python
+from pydantic import BaseModel, EmailStr, validator
+
+class CompanyCreate(BaseModel):
+    name: str
+    email: EmailStr  # Automatic email validation
+    revenue: float
+    website: str
+
+    @validator('revenue')
+    def revenue_must_be_positive(cls, v):
+        if v < 0:
+            raise ValueError('Revenue must be positive')
+        return v
+
+    @validator('website')
+    def website_must_be_url(cls, v):
+        if not v.startswith('http'):
+            raise ValueError('Website must be a valid URL')
+        return v
+```
+
+## SQL Injection Prevention
+
+Always use parameterized queries:
+
+```python
+# ✅ Safe - Parameterized
+supabase.table("companies").select("*").eq("name", user_input).execute()
+
+# ❌ Unsafe - String interpolation
+supabase.rpc("execute_sql", {"query": f"SELECT * FROM companies WHERE name = '{user_input}'"})
+```
+
+## XSS Protection
+
+### Content Security Policy
+
+```python
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
+# Only allow trusted hosts
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["localhost", "app.zarna.com"]
+)
+```
+
+### Response Headers
+
+```python
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    return response
+```
+
+## CSRF Protection
+
+For cookie-based authentication:
+
+```python
+from fastapi_csrf_protect import CsrfProtect
+
+@app.post("/companies")
+async def create_company(
+    company: CompanyCreate,
+    csrf_protect: CsrfProtect = Depends()
+):
+    await csrf_protect.validate_csrf(request)
+    # Process request
+```
+
+## Secrets Management
+
+### Environment Variables
+
+```bash
+# ✅ Good - Environment variables
+SUPABASE_KEY=$(cat /secrets/supabase-key)
+
+# ❌ Bad - Hardcoded
+SUPABASE_KEY=hardcoded-key-in-code
+```
+
+### Key Rotation
+
+```python
+# Support multiple active keys during rotation
+VALID_JWT_SECRETS = [
+    os.getenv("JWT_SECRET_CURRENT"),
+    os.getenv("JWT_SECRET_PREVIOUS")  # For graceful rotation
+]
+
+def validate_token(token):
+    for secret in VALID_JWT_SECRETS:
+        try:
+            return jwt.decode(token, secret, algorithms=["HS256"])
+        except JWTError:
+            continue
+    raise HTTPException(status_code=401, detail="Invalid token")
+```
+
+## Audit Logging
+
+```python
+# Log all sensitive operations
+@router.delete("/companies/{company_id}")
+async def delete_company(company_id: str, request: Request):
+    # Log before action
+    logger.info(
+        f"DELETE_COMPANY: user={request.state.user_id} "
+        f"company={company_id} ip={request.client.host}"
+    )
+
+    # Perform deletion
+    result = delete_company(company_id)
+
+    # Log result
+    logger.info(f"DELETE_COMPANY_RESULT: success={result.success}")
+
+    return result
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/security/authentication">
+    JWT security
+  </Card>
+  <Card title="OAuth Security" icon="key" href="/security/oauth-security">
+    OAuth best practices
+  </Card>
+  <Card title="Data Protection" icon="shield" href="/security/data-protection">
+    RLS and encryption
+  </Card>
+</CardGroup>

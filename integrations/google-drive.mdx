@@ -1,0 +1,77 @@
+---
+title: "Google Drive Integration"
+description: "Sync files from Google Drive to Zarna"
+---
+
+## Overview
+
+The Google Drive integration enables automatic syncing of files from Google Drive to your Zarna CRM.
+
+**Router**: `api/app/routers/drive.py`
+**Service**: `scripts/drive_sync_service.py`
+
+## Features
+
+- **Automatic Sync**: Scheduled syncing of Drive folders
+- **File Upload**: Upload files from Zarna to Drive
+- **Bi-directional**: Sync in both directions
+- **Change Detection**: Only sync modified files
+
+## Setup
+
+### 1. Connect Google Drive
+
+Use OAuth to connect your Google Drive account:
+
+```bash
+POST /api/drive/oauth/init
+```
+
+### 2. Configure Sync Folders
+
+```bash
+POST /api/drive/sync-folders
+{
+  "folders": [
+    {
+      "drive_folder_id": "folder-id-123",
+      "company_id": "company-uuid",
+      "sync_frequency": "hourly"
+    }
+  ]
+}
+```
+
+## API Endpoints
+
+### List Files
+
+```bash
+GET /api/drive/files
+```
+
+### Download File
+
+```bash
+GET /api/drive/files/{file_id}/download
+```
+
+### Upload File
+
+```bash
+POST /api/drive/upload
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Drive API Reference" icon="code" href="/api-reference/drive">
+    Complete API documentation
+  </Card>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Configure OAuth
+  </Card>
+  <Card title="Composio" icon="plug" href="/integrations/composio">
+    OAuth platform
+  </Card>
+</CardGroup>

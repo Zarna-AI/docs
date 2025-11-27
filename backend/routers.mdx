@@ -1,0 +1,208 @@
+---
+title: "API Routers Overview"
+description: "Complete overview of all 25+ FastAPI routers"
+---
+
+## Overview
+
+The Zarna backend is organized into **25+ routers**, each handling a specific domain of functionality.
+
+**Location**: `api/app/routers/`
+
+## Router Organization
+
+### CRM Routers
+
+<CardGroup cols={2}>
+  <Card title="companies.py" icon="building">
+    Company CRUD, search, analytics
+  </Card>
+  <Card title="contacts.py" icon="user">
+    Contact management and relationships
+  </Card>
+  <Card title="deals.py" icon="handshake">
+    Deal pipeline and forecasting
+  </Card>
+  <Card title="interactions.py" icon="comments">
+    Meetings, calls, email tracking
+  </Card>
+  <Card title="financials.py" icon="dollar-sign">
+    Financial records and metrics
+  </Card>
+  <Card title="notes.py" icon="note-sticky">
+    Notes and observations
+  </Card>
+</CardGroup>
+
+### File Management Routers
+
+<CardGroup cols={2}>
+  <Card title="files.py" icon="file">
+    File upload, processing, extraction
+  </Card>
+  <Card title="drive.py" icon="google">
+    Google Drive integration
+  </Card>
+  <Card title="sharepoint.py" icon="microsoft">
+    SharePoint integration
+  </Card>
+  <Card title="egnyte.py" icon="cloud">
+    Egnyte file management
+  </Card>
+  <Card title="basecamp.py" icon="circle-nodes">
+    Basecamp project integration
+  </Card>
+</CardGroup>
+
+### Communication Routers
+
+<CardGroup cols={2}>
+  <Card title="emails.py" icon="envelope">
+    Email tracking and history
+  </Card>
+  <Card title="email_bot.py" icon="robot">
+    Automated email handling
+  </Card>
+  <Card title="calendar.py" icon="calendar">
+    Google Calendar integration
+  </Card>
+</CardGroup>
+
+### AI & Analytics Routers
+
+<CardGroup cols={2}>
+  <Card title="reports.py" icon="file-chart-column">
+    AI-powered report generation
+  </Card>
+  <Card title="sourcing.py" icon="magnifying-glass">
+    AI company sourcing with Exa
+  </Card>
+  <Card title="agentic_chat.py" icon="messages">
+    Multi-agent chat system
+  </Card>
+  <Card title="prompts.py" icon="wand-magic-sparkles">
+    AI prompt operations
+  </Card>
+</CardGroup>
+
+### Management Routers
+
+<CardGroup cols={2}>
+  <Card title="users.py" icon="users">
+    User management
+  </Card>
+  <Card title="firms.py" icon="briefcase">
+    Firm management
+  </Card>
+  <Card title="staffing.py" icon="user-group">
+    Team staffing and workload
+  </Card>
+  <Card title="utilities.py" icon="wrench">
+    Utility endpoints
+  </Card>
+  <Card title="chat_history.py" icon="clock-rotate-left">
+    Chat conversation history
+  </Card>
+  <Card title="meeting_interactions.py" icon="video">
+    Meeting analysis and export
+  </Card>
+</CardGroup>
+
+## Router Structure
+
+### Standard Pattern
+
+```python
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+
+router = APIRouter(
+    prefix="/api/companies",
+    tags=["CRM: Companies"]
+)
+
+class CompanyCreate(BaseModel):
+    name: str
+    industry: Optional[str] = None
+
+class CompanyResponse(BaseModel):
+    id: str
+    name: str
+    industry: Optional[str]
+
+@router.get("/", response_model=List[CompanyResponse])
+async def list_companies():
+    """List all companies"""
+    pass
+
+@router.post("/", response_model=CompanyResponse, status_code=201)
+async def create_company(company: CompanyCreate):
+    """Create new company"""
+    pass
+
+@router.get("/{company_id}", response_model=CompanyResponse)
+async def get_company(company_id: str):
+    """Get company by ID"""
+    pass
+
+@router.patch("/{company_id}", response_model=CompanyResponse)
+async def update_company(company_id: str, company: CompanyUpdate):
+    """Update company"""
+    pass
+
+@router.delete("/{company_id}", status_code=204)
+async def delete_company(company_id: str):
+    """Delete company"""
+    pass
+```
+
+## Router Registration
+
+### Main Application
+
+```python
+# api/app/main.py
+from fastapi import FastAPI
+from app.routers import (
+    companies, contacts, deals, files, reports,
+    email_bot, calendar, drive, agentic_chat
+)
+
+app = FastAPI(title="Zarna API")
+
+# Register routers
+app.include_router(companies.router)
+app.include_router(contacts.router)
+app.include_router(deals.router)
+app.include_router(files.router)
+# ... 20+ more routers
+```
+
+## OpenAPI Tags
+
+Routers are organized with tags for documentation:
+
+```python
+openapi_tags = [
+    {"name": "CRM: Companies", "description": "Company management"},
+    {"name": "CRM: Contacts", "description": "Contact management"},
+    {"name": "CRM: Deals", "description": "Deal pipeline"},
+    {"name": "CRM: Files", "description": "File operations"},
+    # ... more tags
+]
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore all endpoints
+  </Card>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    Backend architecture
+  </Card>
+  <Card title="Authentication" icon="lock" href="/backend/authentication">
+    JWT middleware
+  </Card>
+</CardGroup>

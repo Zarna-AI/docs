@@ -1,0 +1,345 @@
+---
+title: "Agentic System Architecture (Zarna AI)"
+description: "Multi-agent AI orchestration with AutoGen and Claude"
+---
+
+## Overview
+
+The Agentic System, which powers **Zarna AI** (our intelligent chatbot), is a multi-agent AI architecture that enables complex task execution through agent collaboration, specialization, and tool use.
+
+## System Design
+
+### Agent Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Manager Agent (Claude Opus)              │
+│                                                             │
+│  • Receives user query                                      │
+│  • Understands intent                                       │
+│  • Plans execution                                          │
+│  • Routes to specialist agents                              │
+│  • Aggregates results                                       │
+│  • Formats response                                         │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+       ┌───────────┼───────────┬──────────────┐
+       │           │           │              │
+       ↓           ↓           ↓              ↓
+┌─────────────┬─────────────┬─────────────┬─────────────┐
+│   Data      │  Analysis   │ Web Search  │   Report    │
+│  Retrieval  │   Agent     │   Agent     │   Writer    │
+│   Agent     │             │             │   Agent     │
+│             │             │             │             │
+│ • SQL       │ • Calculate │ • Exa API   │ • Markdown  │
+│ • CRM DB    │ • Metrics   │ • Research  │ • Structure │
+│ • Queries   │ • Trends    │ • Market    │ • Format    │
+└─────────────┴─────────────┴─────────────┴─────────────┘
+       │           │           │              │
+       └───────────┴───────────┴──────────────┘
+                   │
+                   ↓
+            ┌─────────────┐
+            │   Tools     │
+            │             │
+            │ • CRM DB    │
+            │ • Calculator│
+            │ • Search    │
+            │ • Code Exec │
+            └─────────────┘
+```
+
+## Agent Communication
+
+### Conversation Flow
+
+```
+User: "Compare revenue for our top 5 companies and show growth trends"
+
+┌──────────────────────────────────────────────────────────────┐
+│ Manager Agent                                                │
+│ "I need to:                                                  │
+│  1. Get top 5 companies by revenue                           │
+│  2. Get historical revenue data                              │
+│  3. Calculate growth rates                                   │
+│  4. Format as comparison"                                    │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                  ┌───────────┴───────────┐
+                  ↓                       ↓
+┌─────────────────────────┐  ┌────────────────────────┐
+│ Data Retrieval Agent    │  │ Analysis Agent         │
+│                         │  │                        │
+│ "SELECT * FROM          │  │ "Calculate CAGR for    │
+│  companies ORDER BY     │  │  each company's        │
+│  revenue DESC LIMIT 5"  │  │  revenue over time"    │
+│                         │  │                        │
+│ Returns: 5 companies    │  │ Returns: Growth %      │
+└─────────────────────────┘  └────────────────────────┘
+                  │                       │
+                  └───────────┬───────────┘
+                              ↓
+┌──────────────────────────────────────────────────────────────┐
+│ Manager Agent                                                │
+│ "Results aggregated. Formatting response..."                 │
+│                                                              │
+│ Response:                                                    │
+│ "Here are your top 5 companies with revenue growth:          │
+│  1. Acme Corp - $15M (25% YoY growth)                        │
+│  2. TechStart - $5M (40% YoY growth)                         │
+│  ..."                                                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## Tool Integration
+
+### CRM Tool
+
+```python
+from scripts.agentic_chat.tools.crm_tool import CRMTool
+
+crm_tool = CRMTool(supabase_client)
+
+# Agent calls tool
+result = crm_tool.query_companies(
+    filters={"industry": "Technology", "revenue_min": 10000000},
+    limit=20
+)
+
+# Returns structured data
+[
+    {"id": "...", "name": "Acme Corp", "revenue": 15000000},
+    {"id": "...", "name": "TechStart", "revenue": 12000000}
+]
+```
+
+### Calculation Tool
+
+```python
+from scripts.agentic_chat.tools.calculation_tool import CalculationTool
+
+calc_tool = CalculationTool()
+
+# Calculate growth rate
+growth = calc_tool.calculate_growth_rate(
+    initial_value=10000000,
+    final_value=15000000,
+    periods=2
+)
+# Returns: 0.225 (22.5% CAGR)
+
+# Calculate average
+avg = calc_tool.average([15000000, 12000000, 8000000])
+# Returns: 11666666.67
+```
+
+### Search Tool
+
+```python
+from scripts.agentic_chat.tools.search_tool import SearchTool
+
+search_tool = SearchTool(exa_api_key)
+
+# Search for market intelligence
+results = await search_tool.search(
+    query="Healthcare SaaS market size 2024",
+    num_results=5
+)
+
+# Returns
+[
+    {
+        "title": "Healthcare SaaS Market Analysis 2024",
+        "url": "https://...",
+        "snippet": "The healthcare SaaS market reached $15B..."
+    }
+]
+```
+
+## AutoGen Integration
+
+### Team Creation
+
+```python
+from autogen import AssistantAgent, UserProxyAgent, GroupChat, GroupChatManager
+
+# Create specialist agents
+data_agent = AssistantAgent(
+    name="data_retrieval",
+    system_message="You are a data retrieval specialist...",
+    llm_config={"model": "claude-3-sonnet-20240229"}
+)
+
+analysis_agent = AssistantAgent(
+    name="analysis",
+    system_message="You are a financial analysis specialist...",
+    llm_config={"model": "claude-3-sonnet-20240229"}
+)
+
+# Create manager
+manager = GroupChatManager(
+    groupchat=GroupChat(
+        agents=[data_agent, analysis_agent],
+        messages=[],
+        max_round=10
+    ),
+    llm_config={"model": "claude-3-opus-20240229"}
+)
+
+# Execute query
+result = await user_proxy.initiate_chat(
+    manager,
+    message=user_query
+)
+```
+
+## Query Understanding
+
+### Natural Language Processing
+
+```python
+class QueryUnderstanding:
+    """
+    Understand user intent and extract parameters
+    """
+
+    async def analyze_query(self, query: str) -> dict:
+        """
+        Analyze query and extract intent
+        """
+        analysis = await self.claude.analyze(query)
+
+        return {
+            "intent": "data_retrieval",  # or "analytics", "update", etc.
+            "entities": {
+                "entity_type": "companies",
+                "filters": {"industry": "Technology"},
+                "limit": 10
+            },
+            "requires_tools": ["crm_tool"],
+            "complexity": "simple"  # or "medium", "complex"
+        }
+```
+
+### Intent Classification
+
+| Intent | Description | Example |
+|--------|-------------|---------|
+| `data_retrieval` | Fetch data from CRM | "Show me all companies" |
+| `analytics` | Calculate metrics | "What's the average deal size?" |
+| `comparison` | Compare entities | "Compare Acme vs TechStart" |
+| `trend_analysis` | Identify trends | "Show revenue growth over time" |
+| `create` | Create new record | "Add a new company called NewCo" |
+| `update` | Modify existing | "Update Acme's revenue to $20M" |
+| `search` | External research | "Find competitors in healthcare SaaS" |
+
+## Performance Optimization
+
+### Agent Pool Benefits
+
+```
+Without Pool (Cold Start):
+User query → Create agents (5-11s) → Execute → Total: 12-18s
+
+With Pool (Warm):
+User query → Use warm agents (0s) → Execute → Total: 3-7s
+
+Savings: 5-11 seconds per query (50-60% faster)
+```
+
+### Parallel Agent Execution
+
+```python
+# Sequential (slow)
+result1 = await data_agent.query()   # 3s
+result2 = await analysis_agent.analyze()  # 4s
+# Total: 7s
+
+# Parallel (fast)
+results = await asyncio.gather(
+    data_agent.query(),
+    analysis_agent.analyze()
+)
+# Total: 4s (max of the two)
+```
+
+## Error Recovery
+
+### Retry Logic
+
+```python
+async def execute_with_retry(agent, query, max_retries=3):
+    """
+    Execute agent query with exponential backoff
+    """
+    for attempt in range(max_retries):
+        try:
+            return await agent.execute(query)
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(2 ** attempt)  # 1s, 2s, 4s
+```
+
+### Fallback Strategies
+
+```python
+try:
+    # Try agentic system
+    result = await agentic_team.execute(query)
+except AgentError:
+    # Fallback to simpler CRM agent
+    result = await crm_agent.execute(query)
+except Exception:
+    # Final fallback: direct database query
+    result = await execute_direct_query(query)
+```
+
+## Monitoring
+
+### Agent Metrics
+
+```python
+{
+    "agent_metrics": {
+        "data_retrieval": {
+            "total_calls": 1247,
+            "avg_duration": 2.3,
+            "success_rate": 0.98
+        },
+        "analysis": {
+            "total_calls": 856,
+            "avg_duration": 3.1,
+            "success_rate": 0.96
+        },
+        "web_search": {
+            "total_calls": 342,
+            "avg_duration": 5.2,
+            "success_rate": 0.94
+        }
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Pool" icon="bolt" href="/architecture/agent-pool">
+    Agent pool optimization
+  </Card>
+  <Card title="Agentic Chat Service" icon="server" href="/backend/services/agentic-chat">
+    Service implementation
+  </Card>
+  <Card title="Agentic Chat API" icon="code" href="/api-reference/agentic-chat">
+    API endpoints
+  </Card>
+  <Card title="CRM Agent" icon="robot" href="/backend/services/crm-agent">
+    CRM-specific operations
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [AutoGen Documentation](https://microsoft.github.io/autogen/)
+- [Anthropic Claude API](https://docs.anthropic.com)
+- [Multi-Agent Systems](https://en.wikipedia.org/wiki/Multi-agent_system)

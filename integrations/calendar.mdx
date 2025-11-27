@@ -1,0 +1,60 @@
+---
+title: "Google Calendar Integration"
+description: "Sync calendar events and schedule meetings"
+---
+
+## Overview
+
+The Google Calendar integration enables event management and scheduling directly from Zarna.
+
+**Router**: `api/app/routers/calendar.py`
+
+## Features
+
+- List upcoming events
+- Create new events
+- Update existing events
+- Sync calendar to CRM
+
+## API Endpoints
+
+### List Events
+
+```bash
+GET /api/calendar/events
+```
+
+**Query Parameters**:
+- `start_date`: ISO 8601 date
+- `end_date`: ISO 8601 date
+- `limit`: Number of events
+
+### Create Event
+
+```bash
+POST /api/calendar/events
+```
+
+**Request Body**:
+
+```json
+{
+  "summary": "Meeting with Acme Corp",
+  "start": "2024-01-25T14:00:00Z",
+  "end": "2024-01-25T15:00:00Z",
+  "attendees": ["john@acmecorp.com"],
+  "description": "Discuss partnership",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Calendar API" icon="code" href="/api-reference/calendar">
+    API documentation
+  </Card>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Configure OAuth
+  </Card>
+</CardGroup>

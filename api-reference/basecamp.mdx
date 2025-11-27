@@ -1,0 +1,64 @@
+---
+title: "Basecamp API"
+description: "Basecamp project management integration endpoints"
+---
+
+## Overview
+
+The Basecamp API provides endpoints for syncing project files and documents from Basecamp.
+
+**Base Path**: `/api/basecamp`
+
+## Endpoints
+
+### List Projects
+
+```bash
+GET /api/basecamp/projects
+```
+
+**Response**:
+
+```json
+{
+  "projects": [
+    {
+      "id": "123456",
+      "name": "Acme Corp Deal",
+      "description": "Partnership project",
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+### List Files
+
+```bash
+GET /api/basecamp/files?project_id={project_id}
+```
+
+### Sync Project
+
+```bash
+POST /api/basecamp/sync/{project_id}
+```
+
+**Request Body**:
+
+```json
+{
+  "company_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Basecamp Integration" icon="circle-nodes" href="/integrations/basecamp">
+    Setup guide
+  </Card>
+  <Card title="Files API" icon="file" href="/api-reference/files">
+    File management
+  </Card>
+</CardGroup>

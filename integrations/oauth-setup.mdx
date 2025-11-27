@@ -1,0 +1,515 @@
+---
+title: "OAuth Setup Guide"
+description: "Complete guide for Gmail and Outlook OAuth integration using Composio"
+---
+
+## Overview
+
+The Email OAuth integration allows users to connect their Gmail and Outlook accounts to the email agent. This document explains how the OAuth flow works and what's been implemented.
+
+## OAuth Flow Architecture
+
+```
+┌─────────────┐    1. Click "Connect Gmail/Outlook"    ┌──────────────────┐
+│   Frontend  │ ─────────────────────────────────────> │  /oauth/init     │
+│   Settings  │                                         │    (Backend)     │
+│    Page     │                                         └──────────────────┘
+└─────────────┘                                                  │
+       ↑                                                         │ 2. Generate
+       │                                                         │    OAuth URL
+       │                                                         ↓
+       │                                            ┌──────────────────┐
+       │                                            │    Composio      │
+       │                                            │     OAuth        │
+       │                                            │   (External)     │
+       │                                            └──────────────────┘
+       │                                                         │
+       │                                                         │ 3. User grants
+       │                                                         │    permission
+       │                                                         ↓
+       │                                            ┌──────────────────┐
+       │                                            │  /oauth/callback │
+       │  5. Redirect with                          │    (Backend)     │
+       │     success/error                          └──────────────────┘
+       │    <─────────────────────────────────────          │
+       │                                                         │ 4. Store tokens
+       │                                                         │    in Supabase
+       └─────────────┘                                          ↓
+         6. Show toast                              ┌──────────────────┐
+         7. Refresh list                            │    Supabase      │
+                                                   │     Tables       │
+                                                   └──────────────────┘
+```
+
+## Backend Implementation
+
+### Gmail OAuth Endpoints
+
+#### POST `/email_bot/gmail/oauth/init`
+
+Initializes the Gmail OAuth flow.
+
+**Request**:
+```json
+{
+  "origin_url": "http://localhost:3000/email-agent-settings"
+}
+```
+
+**Response**:
+```json
+{
+  "auth_url": "https://composio.dev/...",
+  "state": "base64_encoded_state"
+}
+```
+
+**What it does**:
+1. Creates a secure state token with user context
+2. Stores state in memory for validation
+3. Builds Composio authorization URL
+4. Returns URL for frontend to redirect to
+
+#### GET `/email_bot/gmail/oauth/callback`
+
+Handles the OAuth callback from Composio.
+
+**Query Parameters**:
+- `state`: The state token from init
+- `connected_account_id`: Composio account ID
+- `status`: OAuth status (success/error)
+- `error`: Error message (if any)
+
+**What it does**:
+1. Validates state token
+2. Checks state expiration (15 min timeout)
+3. Gets Gmail email address from Composio using `GMAIL_GET_PROFILE` tool
+4. Stores account in `email_oauth_tokens` table
+5. Updates `email_config` with connected email
+6. Redirects back to frontend with result
+
+**Redirect URLs**:
+- **Success**: `{origin_url}?oauth=success&email={email}`
+- **Error**: `{origin_url}?oauth=error&message={error}`
+
+### Outlook OAuth Endpoints
+
+#### POST `/email_bot/outlook/oauth/init`
+
+Initializes the Outlook OAuth flow (same pattern as Gmail).
+
+#### GET `/email_bot/outlook/oauth/callback`
+
+Handles OAuth callback for Outlook using `OUTLOOK_OUTLOOK_GET_PROFILE` tool.
+
+## Database Schema
+
+### `email_oauth_tokens` Table
+
+Stores OAuth credentials for connected accounts.
+
+```sql
+CREATE TABLE email_oauth_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  provider TEXT NOT NULL CHECK (provider IN ('google', 'microsoft')),
+  email TEXT NOT NULL,
+  composio_account_id TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(provider, email)
+);
+```
+
+**Fields**:
+- `user_id`: Reference to the user who connected the account
+- `provider`: `'google'` for Gmail, `'microsoft'` for Outlook
+- `email`: The connected email address
+- `composio_account_id`: Composio's account identifier
+- Unique constraint ensures one account per email per provider
+
+### `email_config` Table
+
+Stores user email configuration and preferences.
+
+```sql
+CREATE TABLE email_config (
+  user_id UUID PRIMARY KEY REFERENCES users(id),
+  connected_emails JSONB DEFAULT '[]'::jsonb,
+  mode TEXT CHECK (mode IN ('draft', 'manual', 'auto')),
+  contact_email TEXT,
+  scheduling_email TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**`connected_emails` Format**:
+```json
+[
+  {
+    "email": "user@gmail.com",
+    "provider": "google"
+  },
+  {
+    "email": "user@outlook.com",
+    "provider": "microsoft"
+  }
+]
+```
+
+## Frontend Implementation
+
+### OAuth Integration
+
+The frontend automatically handles both Gmail and Outlook OAuth callbacks.
+
+**Location**: `/email-agent-settings` page
+
+#### Connect Gmail Button
+
+```typescript
+const handleConnectGmail = async () => {
+  setIsConnectingGmail(true)
+
+  const response = await fetch(`${API_BASE_URL}/email_bot/gmail/oauth/init`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      origin_url: window.location.origin + window.location.pathname
+    })
+  })
+
+  const data = await response.json()
+  window.location.href = data.auth_url
+}
+```
+
+#### Connect Outlook Button
+
+```typescript
+const handleConnectOutlook = async () => {
+  setIsConnectingOutlook(true)
+
+  const response = await fetch(`${API_BASE_URL}/email_bot/outlook/oauth/init`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      origin_url: window.location.origin + window.location.pathname
+    })
+  })
+
+  const data = await response.json()
+  window.location.href = data.auth_url
+}
+```
+
+#### OAuth Callback Handler
+
+Runs on component mount to detect OAuth redirects:
+
+```typescript
+const handleOAuthCallback = () => {
+  const params = new URLSearchParams(window.location.search)
+  const oauthStatus = params.get("oauth")
+  const email = params.get("email")
+  const message = params.get("message")
+
+  if (oauthStatus === "success" && email) {
+    toast.success("Email connected successfully", {
+      description: `${email} has been connected to your account`
+    })
+
+    // Clean up URL
+    window.history.replaceState({}, "", window.location.pathname)
+
+    // Refresh config to show new email
+    fetchEmailConfig()
+  } else if (oauthStatus === "error") {
+    toast.error("Failed to connect email", {
+      description: message || "An error occurred during authentication"
+    })
+
+    // Clean up URL
+    window.history.replaceState({}, "", window.location.pathname)
+  }
+}
+
+useEffect(() => {
+  handleOAuthCallback()
+}, [])
+```
+
+#### Connected Emails Display
+
+Shows all connected Gmail and Outlook accounts with provider logos:
+
+```typescript
+{emailConfig?.connected_emails.map((emailData, index) => (
+  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+    <div className="flex items-center gap-3">
+      {emailData.provider === 'google' ? (
+        <img src="/gmail_new_logo_icon_159149.png" alt="Gmail" className="h-5 w-5" />
+      ) : emailData.provider === 'microsoft' ? (
+        <img src="/png-transparent-outlook-logo.png" alt="Outlook" className="h-5 w-5" />
+      ) : (
+        <Mail className="h-5 w-5" />
+      )}
+      <span>{emailData.email}</span>
+    </div>
+    <Badge>Connected</Badge>
+  </div>
+))}
+```
+
+## Security Features
+
+### State Token Security
+
+- **Generated with user context**: Includes user ID and timestamp
+- **Base64 encoded**: URL-safe transmission
+- **Server-side storage**: Validated against stored states
+- **15-minute expiration**: Prevents replay attacks
+- **Single-use**: Deleted after callback processing
+
+```python
+# Backend state generation
+state_data = {
+    "user_id": user_id,
+    "timestamp": datetime.now().isoformat(),
+    "nonce": secrets.token_urlsafe(16)
+}
+state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
+```
+
+### Authorization
+
+- **JWT authentication**: All endpoints require valid JWT token
+- **User isolation**: Can only access own OAuth flows
+- **Token extraction**: User ID extracted from JWT
+- **Firm-level access**: RLS policies ensure data isolation
+
+### Composio Integration
+
+- **Entity-based auth**: User ID as Composio entity
+- **Account ID storage**: Store Composio IDs, not raw tokens
+- **Automatic refresh**: Composio handles token refresh
+- **Secure callbacks**: Validate all callback parameters
+
+## Environment Variables
+
+### Backend (`.env`)
+
+```bash
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+SUPABASE_JWT_SECRET=your-jwt-secret
+
+# Composio
+COMPOSIO_API_KEY=your-composio-api-key
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-gmail-config-id
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-outlook-config-id
+
+# API Base URL (for callbacks)
+API_BASE_URL=http://localhost:8000
+```
+
+### Frontend (`.env.local`)
+
+```bash
+# Backend API
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Supabase (Frontend - use anon key)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+<Warning>
+  **Security**:
+  - Never use service role key in frontend
+  - Use `NEXT_PUBLIC_` prefix only for safe, client-side variables
+  - Store sensitive keys only in backend `.env`
+</Warning>
+
+## Testing the OAuth Flow
+
+### Manual Testing Steps
+
+<Steps>
+  <Step title="Start Backend Server">
+    ```bash
+    cd zarna-backend/api
+    python run.py
+    ```
+
+    Verify: http://localhost:8000/health returns `{"status": "healthy"}`
+  </Step>
+
+  <Step title="Start Frontend Server">
+    ```bash
+    cd zarna-frontend
+    npm run dev
+    ```
+
+    Verify: http://localhost:3000 loads successfully
+  </Step>
+
+  <Step title="Navigate to Settings">
+    Go to `http://localhost:3000/email-agent-settings` and log in
+  </Step>
+
+  <Step title="Click Connect Gmail/Outlook">
+    Button should show loading state, then redirect to OAuth provider
+  </Step>
+
+  <Step title="Grant Permissions">
+    - Select your Gmail or Outlook account
+    - Grant required permissions
+    - Click "Allow" or "Accept"
+  </Step>
+
+  <Step title="Verify Redirect">
+    - Should redirect back to settings page
+    - Success toast should appear
+    - Email should appear in connected accounts list
+    - URL should be clean (no query parameters)
+  </Step>
+</Steps>
+
+### Expected Behavior
+
+<Tabs>
+  <Tab title="Success Flow">
+    ✅ **Success Flow:**
+    1. Click "Connect Gmail/Outlook" → Loading spinner appears
+    2. Redirect to Google/Microsoft OAuth → Grant permissions
+    3. Redirect back to settings → Green success toast
+    4. Email appears in "Connected Email Accounts"
+    5. URL is clean (no `?oauth=success&email=...`)
+    6. Provider logo displays correctly
+  </Tab>
+
+  <Tab title="Error Flow">
+    ❌ **Error Flow:**
+    1. OAuth error occurs (denied permission, expired state, etc.)
+    2. Redirect back to settings → Red error toast
+    3. Error message displayed
+    4. URL is clean (no query parameters)
+    5. Can retry connection
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Failed to initialize OAuth flow">
+    **Cause**: Backend endpoint not responding or unauthorized
+
+    **Solution**:
+    - Verify backend is running on `localhost:8000`
+    - Check JWT token is valid
+    - Ensure `COMPOSIO_API_KEY` is set in backend `.env`
+    - Check browser console for error messages
+  </Accordion>
+
+  <Accordion title="Invalid or expired state">
+    **Cause**: State token expired (> 15 minutes) or tampered with
+
+    **Solution**:
+    - Try connecting again (state expires after 15 minutes)
+    - Check system clock is synchronized
+    - Ensure cookies/localStorage aren't blocked
+  </Accordion>
+
+  <Accordion title="Failed to get authorized email">
+    **Cause**: Composio API error or insufficient permissions
+
+    **Solution**:
+    - Verify Composio API key is valid
+    - Check `COMPOSIO_GMAIL_AUTH_CONFIG_ID` or `COMPOSIO_OUTLOOK_AUTH_CONFIG_ID`
+    - Ensure OAuth app has correct scopes configured in Composio
+    - Check backend logs for detailed error messages
+  </Accordion>
+
+  <Accordion title="Email not appearing in list">
+    **Cause**: Database update failed or frontend not refreshing
+
+    **Solution**:
+    - Check Supabase connection in backend
+    - Verify table permissions allow INSERT/UPDATE
+    - Check browser console for API errors
+    - Try refreshing the page manually
+  </Accordion>
+
+  <Accordion title="CORS error when calling API">
+    **Cause**: Backend CORS not configured for frontend origin
+
+    **Solution**:
+    ```python
+    # In backend main.py, ensure CORS allows frontend:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://localhost:3001"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Gmail vs Outlook Comparison
+
+| Feature | Gmail | Outlook |
+|---------|-------|---------|
+| **Init Endpoint** | `/email_bot/gmail/oauth/init` | `/email_bot/outlook/oauth/init` |
+| **Callback Endpoint** | `/email_bot/gmail/oauth/callback` | `/email_bot/outlook/oauth/callback` |
+| **Provider Name** | `google` | `microsoft` |
+| **Auth Config Env** | `COMPOSIO_GMAIL_AUTH_CONFIG_ID` | `COMPOSIO_OUTLOOK_AUTH_CONFIG_ID` |
+| **Profile Tool** | `GMAIL_GET_PROFILE` | `OUTLOOK_OUTLOOK_GET_PROFILE` |
+| **Email Field** | `emailAddress` | `mail` |
+| **Logo** | `/gmail_new_logo_icon_159149.png` | `/png-transparent-outlook-logo.png` |
+| **OAuth Callback** | Same handler | Same handler |
+
+## What's Next
+
+Once OAuth is working, you can:
+
+1. **Disconnect emails**: Add functionality to remove connected accounts
+2. **Token refresh monitoring**: Track and alert on token expiration
+3. **Connection health checks**: Verify tokens are still valid
+4. **Send emails**: Use Composio's email sending capabilities
+5. **Email syncing**: Fetch emails and sync to database
+6. **Email automation**: Build automated email workflows
+
+## Summary
+
+✅ **What's Working**:
+- Gmail OAuth initialization and callback
+- Outlook OAuth initialization and callback
+- Secure state management (15-min expiration)
+- Database persistence in Supabase
+- Frontend toast notifications
+- URL cleanup after redirect
+- Connected emails display with provider logos
+- Comprehensive error handling
+
+🎯 **Production Ready**:
+The OAuth flow is fully functional and ready for production use. Just ensure proper environment variables are configured in your deployment environment.
+
+## Resources
+
+- [Composio Documentation](https://docs.composio.dev)
+- [OAuth 2.0 Specification](https://oauth.net/2/)
+- [Supabase Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)
+- [JWT Best Practices](https://tools.ietf.org/html/rfc8725)

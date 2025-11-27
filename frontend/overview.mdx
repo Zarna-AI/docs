@@ -1,0 +1,326 @@
+---
+title: "Frontend Overview"
+description: "Introduction to Zarna's React 19 frontend application"
+---
+
+## Introduction
+
+The Zarna frontend is a modern React 19 application built with Vite 6.2, featuring a comprehensive component library, theme system, and best-in-class developer experience.
+
+## Architecture
+
+### Technology Stack
+
+- **React 19.1.0** - Latest React with Server Components support
+- **Vite 6.2.0** - Lightning-fast build tool and dev server
+- **TypeScript 5.x** - Type-safe development
+- **TailwindCSS 4.0** - Utility-first CSS framework
+- **shadcn/ui** - High-quality component library (New York variant)
+- **Radix UI** - Accessible component primitives
+
+<Card title="Full Tech Stack" icon="layer-group" href="/frontend/tech-stack">
+  See the complete list of frontend technologies and libraries
+</Card>
+
+### Key Features
+
+<CardGroup cols={2}>
+  <Card title="Type-Safe Development" icon="shield-check">
+    TypeScript strict mode throughout with full type inference and compile-time safety
+  </Card>
+  <Card title="Theme System" icon="palette">
+    OKLCH-based color system with seamless dark/light mode support
+  </Card>
+  <Card title="Component Library" icon="puzzle-piece">
+    40+ shadcn/ui components with consistent styling and accessibility
+  </Card>
+  <Card title="Form Management" icon="clipboard-list">
+    React Hook Form + Zod validation for type-safe forms
+  </Card>
+  <Card title="Responsive Design" icon="mobile">
+    Mobile-first design with TailwindCSS breakpoints
+  </Card>
+  <Card title="Hot Module Replacement" icon="bolt">
+    Instant feedback with Vite's HMR - updates in <100ms
+  </Card>
+</CardGroup>
+
+## Project Structure
+
+```
+zarna-frontend/
+├── app/                      # Next.js App Router (if using Next.js)
+│   ├── globals.css          # Global styles & theme variables
+│   ├── layout.tsx           # Root layout
+│   └── page.tsx             # Pages
+│
+├── src/                     # Source code (if using Vite)
+│   ├── components/          # React components
+│   │   ├── ui/             # shadcn/ui components (auto-generated)
+│   │   ├── layout/         # Layout components
+│   │   └── features/       # Feature-specific components
+│   │
+│   ├── context/            # React Context providers
+│   │   ├── AuthContext.tsx
+│   │   └── CompanyContext.tsx
+│   │
+│   ├── hooks/              # Custom React hooks
+│   │   └── use-mobile.ts
+│   │
+│   ├── lib/                # Utility functions
+│   │   └── utils.ts        # cn() helper and utilities
+│   │
+│   ├── services/           # API integration
+│   │   └── api.ts
+│   │
+│   └── utils/              # Helper functions
+│
+├── public/                  # Static assets
+├── components.json          # shadcn/ui configuration
+├── tsconfig.json           # TypeScript configuration
+├── vite.config.ts          # Vite configuration
+├── tailwind.config.js      # Tailwind configuration
+└── package.json            # Dependencies
+```
+
+<Card title="Detailed Structure" icon="folder-tree" href="/frontend/project-structure">
+  Learn more about the directory organization and conventions
+</Card>
+
+## Core Concepts
+
+### Component Architecture
+
+All components follow these patterns:
+
+1. **Functional Components**: No class components
+2. **TypeScript**: Strict typing for all props and state
+3. **Composition**: Small, reusable components
+4. **Accessibility**: WCAG AA+ compliance via Radix UI
+5. **Performance**: Lazy loading and code splitting
+
+### State Management
+
+- **Local State**: useState for component-specific state
+- **Context API**: AuthContext and CompanyContext for global state
+- **Form State**: React Hook Form for complex forms
+- **Server State**: React Query (coming soon) for API data
+
+### Styling Approach
+
+- **TailwindCSS**: Utility-first CSS for rapid development
+- **CSS Variables**: Theme colors defined as CSS custom properties
+- **OKLCH Color Space**: Better perceptual uniformity than RGB/HSL
+- **Responsive**: Mobile-first with breakpoints (sm, md, lg, xl, 2xl)
+- **Dark Mode**: Automatic with `next-themes` and `.dark` class
+
+<Card title="Theme System Details" icon="paintbrush" href="/frontend/theme-system">
+  Deep dive into the color system and theming
+</Card>
+
+## Development Workflow
+
+### Local Development
+
+```bash
+# Start development server
+cd zarna-frontend
+npm run dev
+
+# Server starts at http://localhost:3000
+# Hot module replacement enabled
+```
+
+### Key Commands
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production (tsc + vite build)
+npm run preview      # Preview production build locally
+npm run lint         # Run ESLint
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting
+```
+
+### Path Aliases
+
+Import using `@/` prefix for clean imports:
+
+```typescript
+// ✅ Good
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
+
+// ❌ Bad
+import { Button } from "../../../components/ui/button"
+```
+
+**Configuration**: `tsconfig.json` paths setting
+
+## Features
+
+The Zarna frontend includes several major feature areas:
+
+<CardGroup cols={2}>
+  <Card title="Dashboard" icon="grid" href="/frontend/features/dashboard">
+    Main dashboard with widgets, metrics, and quick actions
+  </Card>
+  <Card title="CRM Interface" icon="building" href="/frontend/features/crm">
+    Company, contact, and deal management with advanced filtering
+  </Card>
+  <Card title="Report Generation" icon="file-chart-column" href="/frontend/features/reports">
+    AI-powered report generation with real-time streaming
+  </Card>
+  <Card title="Sourcing Dashboard" icon="magnifying-glass" href="/frontend/features/sourcing">
+    AI company discovery and sourcing workflows
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+The codebase follows strict best practices for maintainability and scalability:
+
+1. **Always use `cn()` for className merging** - Intelligently merges Tailwind classes
+2. **Use CSS variables for colors** - Theme-aware, works with dark mode
+3. **Type everything** - No `any` types, strict TypeScript
+4. **Extract reusable logic to hooks** - DRY principle
+5. **Composable components** - Small, focused, reusable
+6. **Accessibility first** - Semantic HTML, ARIA labels, keyboard navigation
+
+<Card title="Complete Best Practices Guide" icon="star" href="/frontend/best-practices">
+  Learn all the coding standards and patterns
+</Card>
+
+## Adding Components
+
+### Using shadcn/ui Components
+
+```bash
+# Add a new component
+npx shadcn@latest add [component-name]
+
+# Examples:
+npx shadcn@latest add button
+npx shadcn@latest add dialog
+npx shadcn@latest add form
+```
+
+<Warning>
+  **Never manually edit files in `components/ui/`!** Always use the shadcn CLI to add or update components.
+</Warning>
+
+### Creating Custom Components
+
+```typescript
+// components/custom-card.tsx
+"use client" // Only if using hooks or browser APIs
+
+import * as React from "react"
+import { cn } from "@/lib/utils"
+import { cva, type VariantProps } from "class-variance-authority"
+
+const customCardVariants = cva(
+  "rounded-lg border bg-card text-card-foreground shadow-sm",
+  {
+    variants: {
+      variant: {
+        default: "border-border",
+        highlighted: "border-primary"
+      }
+    },
+    defaultVariants: {
+      variant: "default"
+    }
+  }
+)
+
+interface CustomCardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof customCardVariants> {
+  // Custom props
+}
+
+export function CustomCard({
+  className,
+  variant,
+  ...props
+}: CustomCardProps) {
+  return (
+    <div
+      className={cn(customCardVariants({ variant }), className)}
+      {...props}
+    />
+  )
+}
+```
+
+<Card title="Component Patterns" icon="code" href="/frontend/components">
+  Learn the component architecture and patterns
+</Card>
+
+## Performance
+
+### Optimization Techniques
+
+- **Code Splitting**: Lazy load routes and heavy components
+- **Tree Shaking**: Vite automatically removes unused code
+- **Bundle Analysis**: `npm run build -- --analyze`
+- **Image Optimization**: Use Next.js Image component where possible
+- **Minimize Client JS**: Default to server components (if using Next.js)
+
+### Build Performance
+
+- **Development**: Server starts in <1 second
+- **HMR**: Updates in <100ms
+- **Production Build**: 10-30 seconds (depending on app size)
+- **Bundle Size**: ~300-500KB gzipped (optimized)
+
+## Testing
+
+Currently no test frameworks are explicitly configured. When adding tests, consider:
+
+- **Vitest**: Vite's test runner (recommended)
+- **React Testing Library**: Component testing
+- **Playwright**: E2E testing
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder" href="/frontend/project-structure">
+    Understand the directory organization
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/frontend/tech-stack">
+    Explore all the technologies used
+  </Card>
+  <Card title="Theme System" icon="palette" href="/frontend/theme-system">
+    Learn about colors and theming
+  </Card>
+  <Card title="Best Practices" icon="check" href="/frontend/best-practices">
+    Follow the coding standards
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+<AccordionGroup>
+  <Accordion title="Component not styling correctly?">
+    Check the [troubleshooting guide](/frontend/best-practices#troubleshooting) for common styling issues
+  </Accordion>
+
+  <Accordion title="TypeScript errors?">
+    Run `npm run build` to see all type errors. Ensure `@/` imports are working correctly.
+  </Accordion>
+
+  <Accordion title="Theme not switching?">
+    Verify ThemeProvider is configured in your root layout and `suppressHydrationMismatch` is on `<html>` tag.
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+- [React 19 Documentation](https://react.dev)
+- [Vite Documentation](https://vitejs.dev)
+- [shadcn/ui Documentation](https://ui.shadcn.com)
+- [TailwindCSS Documentation](https://tailwindcss.com)
+- [Radix UI Documentation](https://www.radix-ui.com)

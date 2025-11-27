@@ -1,80 +1,309 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quickstart Guide"
+description: "Get Zarna up and running in under 10 minutes"
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have the following installed:
 
-### Step 1: Set up your local environment
+- **Node.js** 18+ and npm
+- **Python** 3.8+
+- **Git**
+- A **Supabase** account (free tier works)
+- API keys for:
+  - **Anthropic Claude** (for AI features)
+  - **OpenAI** (optional, for additional AI capabilities)
+  - **Composio** (for OAuth integrations)
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Step 1: Clone the Repository
 
-### Step 2: Deploy your changes
+```bash
+cd ~/your-projects-folder
+git clone <your-zarna-repo-url>
+cd zarna
+```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+The repository has a monorepo structure:
+```
+zarna/
+├── zarna-frontend/    # React application
+├── zarna-backend/     # FastAPI application
+├── docs/              # Documentation (you are here!)
+└── zarna-website/     # Marketing website
+```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Step 2: Set Up Backend
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+### Install Python Dependencies
 
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+```bash
+cd zarna-backend
+pip install -r requirements.txt
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Tip**: Consider using a virtual environment to isolate dependencies:
+  ```bash
+  python -m venv zarna_env
+  source zarna_env/bin/activate  # On Windows: zarna_env\Scripts\activate
+  ```
 </Note>
+
+### Configure Environment Variables
+
+Create a `.env` file in the `zarna-backend` directory:
+
+```bash
+cd zarna-backend
+touch .env
+```
+
+Add the following configuration:
+
+```bash
+# Server Configuration
+PORT=8000
+HOST=0.0.0.0
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+
+# AI Services
+ANTHROPIC_API_KEY=your-anthropic-key
+OPENAI_API_KEY=your-openai-key
+
+# OAuth Integrations (Composio)
+COMPOSIO_API_KEY=your-composio-key
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-gmail-config-id
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-outlook-config-id
+
+# API Base URL (for OAuth callbacks)
+API_BASE_URL=http://localhost:8000
+```
+
+<Warning>
+  **Security**: Never commit your `.env` file to version control. It's already in `.gitignore`.
+</Warning>
+
+### Start the Backend Server
+
+```bash
+cd api
+python run.py
+```
+
+You should see:
+```
+[STARTUP] 🚀 Starting Zarna API with Agent Pool Manager...
+[STARTUP] ✅ Agent Pool Manager started successfully
+[STARTUP] ✅ Zarna API startup complete
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+<Check>
+  **Verify**: Navigate to http://localhost:8000/docs to see the interactive API documentation.
+</Check>
+
+## Step 3: Set Up Frontend
+
+Open a new terminal window/tab.
+
+### Install Node Dependencies
+
+```bash
+cd zarna-frontend
+npm install
+```
+
+### Configure Environment Variables
+
+Create a `.env.local` file in the `zarna-frontend` directory:
+
+```bash
+touch .env.local
+```
+
+Add the backend API URL:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### Start the Frontend Server
+
+```bash
+npm run dev
+```
+
+You should see:
+```
+  VITE v6.2.0  ready in 1234 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+```
+
+<Check>
+  **Verify**: Navigate to http://localhost:3000 to see the Zarna application.
+</Check>
+
+## Step 4: Set Up Supabase Database
+
+### Create Database Tables
+
+Zarna requires several database tables for CRM, files, users, and integrations.
+
+1. Go to your Supabase project dashboard
+2. Navigate to **SQL Editor**
+3. Run the initialization scripts located in `/zarna-backend/supabase/migrations/`
+
+<Tip>
+  The backend will automatically create some tables on first run, but it's recommended to run the migration scripts for a complete setup.
+</Tip>
+
+### Enable Row Level Security (RLS)
+
+For production deployments, enable RLS policies on your tables:
+
+```sql
+-- Example: Enable RLS on companies table
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for authenticated users
+CREATE POLICY "Users can view their firm's companies"
+  ON companies FOR SELECT
+  USING (firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  ));
+```
+
+## Step 5: Verify Installation
+
+### Test Backend Health
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+```json
+{
+  "status": "healthy"
+}
+```
+
+### Test Frontend Connection
+
+1. Open http://localhost:3000
+2. You should see the login page
+3. Create an account or log in
+4. You should be redirected to the dashboard
+
+### Test API Integration
+
+From the frontend, try:
+- Creating a new company
+- Uploading a document
+- Running a search query
+
+If all operations work, your installation is complete!
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Explore Features"
+    icon="compass"
+    href="/frontend/features/crm"
+  >
+    Learn about CRM, reports, and sourcing features
+  </Card>
+  <Card
+    title="Set Up Integrations"
+    icon="puzzle-piece"
+    href="/integrations/oauth-setup"
+  >
+    Connect Gmail, Drive, SharePoint, and other services
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
+    href="/api-reference/introduction"
+  >
+    Explore the complete API documentation
+  </Card>
+  <Card
+    title="Architecture Guide"
+    icon="sitemap"
+    href="/architecture/system-overview"
+  >
+    Understand how Zarna works under the hood
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Port 8000 already in use">
+    Change the `PORT` in your `.env` file:
+    ```bash
+    PORT=8001
+    ```
+    Don't forget to update `NEXT_PUBLIC_API_URL` in the frontend!
+  </Accordion>
+
+  <Accordion title="Missing Python packages">
+    Ensure you're in the correct directory and virtual environment:
+    ```bash
+    cd zarna-backend
+    source zarna_env/bin/activate
+    pip install -r requirements.txt
+    ```
+  </Accordion>
+
+  <Accordion title="Supabase connection error">
+    Verify your `SUPABASE_URL` and `SUPABASE_KEY` are correct. The key should be the **service role key**, not the anon key.
+  </Accordion>
+
+  <Accordion title="npm install fails">
+    Try deleting `node_modules` and `package-lock.json`:
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="API calls fail with CORS error">
+    Ensure the backend is running on `localhost:8000` and the frontend on `localhost:3000`. The backend CORS configuration allows these origins.
+  </Accordion>
+</AccordionGroup>
+
+## Development Workflow
+
+Now that you're set up, here's the typical development workflow:
+
+1. **Start backend**: `cd zarna-backend/api && python run.py`
+2. **Start frontend**: `cd zarna-frontend && npm run dev`
+3. **Make changes**: Edit code in your IDE
+4. **Hot reload**: Both servers auto-reload on changes
+5. **Test**: Use the frontend UI or API docs at `/docs`
+
+<Tip>
+  **Pro tip**: Use separate terminal tabs/panes for backend and frontend so you can see logs from both simultaneously.
+</Tip>
+
+## Ready to Build?
+
+Your Zarna development environment is ready! Start building amazing features for private equity workflows.
+
+<Card
+  title="Need help?"
+  icon="circle-question"
+  href="mailto:support@zarna.com"
+>
+  Contact our team if you encounter any issues.
+</Card>

@@ -1,0 +1,484 @@
+---
+title: "Installation Guide"
+description: "Detailed installation instructions for Zarna platform"
+---
+
+## System Requirements
+
+### Minimum Requirements
+
+- **Operating System**: macOS 10.15+, Linux (Ubuntu 20.04+), or Windows 10/11 with WSL2
+- **CPU**: 2 cores minimum, 4 cores recommended
+- **RAM**: 4GB minimum, 8GB recommended
+- **Disk Space**: 5GB free space
+
+### Software Prerequisites
+
+<Steps>
+  <Step title="Install Node.js">
+    Download and install Node.js 18+ from [nodejs.org](https://nodejs.org/)
+
+    Verify installation:
+    ```bash
+    node --version  # Should show v18.0.0 or higher
+    npm --version   # Should show 9.0.0 or higher
+    ```
+  </Step>
+
+  <Step title="Install Python">
+    Download and install Python 3.8+ from [python.org](https://www.python.org/)
+
+    Verify installation:
+    ```bash
+    python --version  # or python3 --version
+    # Should show Python 3.8.0 or higher
+    ```
+  </Step>
+
+  <Step title="Install Git">
+    Download from [git-scm.com](https://git-scm.com/)
+
+    Verify installation:
+    ```bash
+    git --version  # Should show git version 2.x
+    ```
+  </Step>
+</Steps>
+
+## Backend Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-zarna-repo-url>
+cd zarna/zarna-backend
+```
+
+### 2. Create Virtual Environment (Recommended)
+
+<Tabs>
+  <Tab title="macOS/Linux">
+    ```bash
+    python -m venv zarna_env
+    source zarna_env/bin/activate
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```bash
+    python -m venv zarna_env
+    zarna_env\Scripts\activate
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  You'll know the virtual environment is activated when you see `(zarna_env)` in your terminal prompt.
+</Tip>
+
+### 3. Install Python Dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+This will install 145+ packages including:
+- **FastAPI** - Web framework
+- **Uvicorn** - ASGI server
+- **Docling** - Document processing
+- **AutoGen** - Multi-agent AI
+- **Supabase** - Database client
+- **Anthropic** - Claude AI SDK
+- **PDFPlumber** - PDF extraction
+- **EasyOCR** - OCR processing
+
+<Note>
+  Installation may take 5-10 minutes depending on your internet connection. Some packages like `torch` are large.
+</Note>
+
+### 4. Configure Environment Variables
+
+Create a `.env` file in `zarna-backend/`:
+
+```bash
+touch .env
+```
+
+Copy this template and fill in your values:
+
+```bash
+# ================================
+# Server Configuration
+# ================================
+PORT=8000
+HOST=0.0.0.0
+
+# ================================
+# Database (Supabase)
+# ================================
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+SUPABASE_JWT_SECRET=your-jwt-secret
+
+# ================================
+# AI Services
+# ================================
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+OPENAI_API_KEY=sk-xxxxx  # Optional
+
+# ================================
+# OAuth Integrations (Composio)
+# ================================
+COMPOSIO_API_KEY=your-composio-key
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-gmail-config
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-outlook-config
+
+# ================================
+# External Services
+# ================================
+EXA_API_KEY=your-exa-key  # For AI sourcing
+API_BASE_URL=http://localhost:8000
+
+# ================================
+# File Storage
+# ================================
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE_MB=100
+```
+
+<Warning>
+  **Security Best Practices**:
+  - Never commit `.env` to version control
+  - Use different keys for development and production
+  - Rotate API keys regularly
+  - Use service role key for Supabase backend, not anon key
+</Warning>
+
+### 5. Verify Backend Installation
+
+Start the server:
+
+```bash
+cd api
+python run.py
+```
+
+Expected output:
+```
+[STARTUP] 🚀 Starting Zarna API with Agent Pool Manager...
+[STARTUP] ✅ Agent Pool Manager started successfully
+[STARTUP] ✅ Zarna API startup complete
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process using WatchFiles
+```
+
+Test the health endpoint:
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+```json
+{"status": "healthy"}
+```
+
+<Check>
+  **Success**: Navigate to http://localhost:8000/docs to see the interactive API documentation powered by Swagger UI.
+</Check>
+
+## Frontend Installation
+
+### 1. Navigate to Frontend Directory
+
+```bash
+cd zarna/zarna-frontend
+```
+
+### 2. Install Node Dependencies
+
+```bash
+npm install
+```
+
+This will install 200+ packages including:
+- **React 19** - UI library
+- **Vite 6.2** - Build tool
+- **TailwindCSS 4** - Styling
+- **shadcn/ui** - Component library
+- **Radix UI** - Accessible primitives
+- **React Router** - Routing
+- **React Hook Form** - Form management
+- **Zod** - Schema validation
+
+<Note>
+  Installation typically takes 2-3 minutes. If you encounter peer dependency warnings, they're usually safe to ignore.
+</Note>
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file in `zarna-frontend/`:
+
+```bash
+touch .env.local
+```
+
+Add these variables:
+
+```bash
+# Backend API
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Supabase (Frontend - use anon key)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Feature Flags (Optional)
+NEXT_PUBLIC_ENABLE_ANALYTICS=false
+NEXT_PUBLIC_ENV=development
+```
+
+<Tip>
+  **Environment Variables**: The `NEXT_PUBLIC_` prefix exposes variables to the browser. Never put sensitive keys here - use them only in the backend.
+</Tip>
+
+### 4. Verify Frontend Installation
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Expected output:
+```
+  VITE v6.2.0  ready in 543 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+  ➜  press h to show help
+```
+
+<Check>
+  **Success**: Open http://localhost:3000 in your browser. You should see the Zarna login page.
+</Check>
+
+## Database Setup (Supabase)
+
+### 1. Create Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create an account
+2. Click "New Project"
+3. Fill in:
+   - **Name**: Zarna Development
+   - **Database Password**: Generate a strong password (save it!)
+   - **Region**: Choose closest to you
+4. Wait 2-3 minutes for project initialization
+
+### 2. Get API Keys
+
+From your Supabase dashboard:
+
+1. Go to **Settings** → **API**
+2. Copy these values:
+   - **Project URL** → Use in `SUPABASE_URL`
+   - **anon public** → Use in `NEXT_PUBLIC_SUPABASE_ANON_KEY` (frontend)
+   - **service_role** → Use in `SUPABASE_KEY` (backend)
+3. Go to **Settings** → **API** → **JWT Settings**
+   - Copy **JWT Secret** → Use in `SUPABASE_JWT_SECRET`
+
+<Warning>
+  **Important**: The `service_role` key bypasses Row Level Security. Only use it in the backend, never expose it to the frontend!
+</Warning>
+
+### 3. Create Database Tables
+
+<Tabs>
+  <Tab title="Via SQL Editor (Recommended)">
+    1. Go to **SQL Editor** in Supabase dashboard
+    2. Click **New Query**
+    3. Navigate to `/zarna-backend/supabase/migrations/` in your codebase
+    4. Copy and paste each migration file's contents
+    5. Click **Run** for each migration
+  </Tab>
+
+  <Tab title="Via Supabase CLI">
+    ```bash
+    # Install Supabase CLI
+    npm install -g supabase
+
+    # Link your project
+    supabase link --project-ref your-project-ref
+
+    # Push migrations
+    supabase db push
+    ```
+  </Tab>
+</Tabs>
+
+### 4. Enable Row Level Security (RLS)
+
+For production security, enable RLS on all tables:
+
+```sql
+-- Enable RLS on main tables
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for authenticated users
+-- Example for companies table
+CREATE POLICY "Users can view their firm's companies"
+  ON companies FOR SELECT
+  USING (
+    firm_id IN (
+      SELECT firm_id FROM users WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert their firm's companies"
+  ON companies FOR INSERT
+  WITH CHECK (
+    firm_id IN (
+      SELECT firm_id FROM users WHERE id = auth.uid()
+    )
+  );
+```
+
+## Verification Checklist
+
+After installation, verify everything works:
+
+<Steps>
+  <Step title="Backend Running">
+    ✅ http://localhost:8000/health returns `{"status": "healthy"}`
+    ✅ http://localhost:8000/docs shows API documentation
+  </Step>
+
+  <Step title="Frontend Running">
+    ✅ http://localhost:3000 shows login page
+    ✅ No console errors in browser developer tools
+  </Step>
+
+  <Step title="Database Connected">
+    ✅ Backend logs show successful Supabase connection
+    ✅ Can create a user account through the frontend
+  </Step>
+
+  <Step title="Full Integration">
+    ✅ Can log in and access dashboard
+    ✅ Can create a company record
+    ✅ Can upload a test file
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Backend Issues
+
+<AccordionGroup>
+  <Accordion title="ModuleNotFoundError">
+    **Cause**: Missing Python packages
+
+    **Solution**:
+    ```bash
+    # Ensure virtual environment is activated
+    source zarna_env/bin/activate  # or zarna_env\Scripts\activate on Windows
+
+    # Reinstall dependencies
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    **Cause**: Port 8000 is occupied by another process
+
+    **Solution**:
+    ```bash
+    # Find process using port 8000
+    lsof -ti:8000  # macOS/Linux
+    netstat -ano | findstr :8000  # Windows
+
+    # Kill the process or change PORT in .env
+    PORT=8001
+    ```
+  </Accordion>
+
+  <Accordion title="Supabase connection error">
+    **Cause**: Invalid credentials or network issue
+
+    **Solution**:
+    - Verify `SUPABASE_URL` ends with `.supabase.co`
+    - Check you're using service_role key, not anon key
+    - Test connection: `curl https://your-project.supabase.co/rest/v1/`
+  </Accordion>
+</AccordionGroup>
+
+### Frontend Issues
+
+<AccordionGroup>
+  <Accordion title="npm install fails">
+    **Cause**: Package conflicts or corrupted cache
+
+    **Solution**:
+    ```bash
+    # Clear cache and reinstall
+    rm -rf node_modules package-lock.json
+    npm cache clean --force
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="Vite build errors">
+    **Cause**: TypeScript errors or corrupted build cache
+
+    **Solution**:
+    ```bash
+    # Clear build cache
+    rm -rf .next node_modules/.vite
+
+    # Run type check
+    npm run build
+    ```
+  </Accordion>
+
+  <Accordion title="API calls return 401 Unauthorized">
+    **Cause**: Frontend can't reach backend or auth token issues
+
+    **Solution**:
+    - Ensure backend is running on localhost:8000
+    - Check `NEXT_PUBLIC_API_URL` in `.env.local`
+    - Clear browser localStorage and try logging in again
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Development Workflow" icon="code" href="/development">
+    Learn the day-to-day development process
+  </Card>
+  <Card title="Architecture Overview" icon="sitemap" href="/getting-started/architecture-overview">
+    Understand how Zarna is structured
+  </Card>
+  <Card title="Set Up Integrations" icon="plug" href="/integrations/oauth-setup">
+    Connect Gmail, Drive, and other services
+  </Card>
+  <Card title="API Documentation" icon="book" href="/api-reference/introduction">
+    Explore available endpoints
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you're stuck:
+
+1. Check the [troubleshooting section](#troubleshooting) above
+2. Search existing documentation
+3. Contact support: support@zarna.com
+
+<Tip>
+  **Pro tip**: Join our community Slack channel for faster responses from other developers!
+</Tip>

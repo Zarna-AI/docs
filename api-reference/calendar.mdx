@@ -1,0 +1,114 @@
+---
+title: "Calendar API"
+description: "Google Calendar integration and event management"
+---
+
+## Overview
+
+The Calendar API provides endpoints for managing Google Calendar events and scheduling.
+
+**Base Path**: `/api/calendar`
+
+## Endpoints
+
+### List Events
+
+```bash
+GET /api/calendar/events
+```
+
+**Query Parameters**:
+- `start_date`: ISO 8601 date (default: today)
+- `end_date`: ISO 8601 date (default: 30 days from now)
+- `limit`: Number of events (default: 100)
+
+**Response**:
+
+```json
+{
+  "events": [
+    {
+      "id": "event-123",
+      "summary": "Meeting with Acme Corp",
+      "start": "2024-01-25T14:00:00Z",
+      "end": "2024-01-25T15:00:00Z",
+      "attendees": ["john@acmecorp.com"],
+      "location": "Video call"
+    }
+  ],
+  "total": 5
+}
+```
+
+### Create Event
+
+```bash
+POST /api/calendar/events
+```
+
+**Request Body**:
+
+```json
+{
+  "summary": "Partnership discussion",
+  "start": "2024-01-25T14:00:00Z",
+  "end": "2024-01-25T15:00:00Z",
+  "attendees": ["john@acmecorp.com", "jane@techstart.com"],
+  "description": "Discuss Q1 partnership",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "event-456",
+  "summary": "Partnership discussion",
+  "start": "2024-01-25T14:00:00Z",
+  "calendar_link": "https://calendar.google.com/event?eid=..."
+}
+```
+
+### Update Event
+
+```bash
+PATCH /api/calendar/events/{event_id}
+```
+
+### Delete Event
+
+```bash
+DELETE /api/calendar/events/{event_id}
+```
+
+## Frontend Integration
+
+```typescript
+async function createCalendarEvent(event: CalendarEvent) {
+  const response = await fetch('/api/calendar/events', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(event)
+  })
+
+  return response.json()
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Calendar Integration" icon="calendar" href="/integrations/calendar">
+    Setup guide
+  </Card>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Configure OAuth
+  </Card>
+  <Card title="Interactions API" icon="comments" href="/api-reference/interactions">
+    Track meetings
+  </Card>
+</CardGroup>

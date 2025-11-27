@@ -1,0 +1,567 @@
+---
+title: "Frontend Tech Stack"
+description: "Complete breakdown of frontend technologies and libraries"
+---
+
+## Core Technologies
+
+### React 19.1.0
+
+Latest version of React with significant improvements:
+
+**Key Features**:
+- Server Components support
+- Improved hooks performance
+- Automatic batching for better performance
+- Concurrent rendering capabilities
+- Better TypeScript integration
+
+**What We Use**:
+```typescript
+// Functional components with hooks
+import { useState, useEffect, useMemo, useCallback } from 'react'
+
+function Component() {
+  const [state, setState] = useState(initialState)
+  // Component logic
+}
+```
+
+### Vite 6.2.0
+
+Modern build tool with exceptional developer experience:
+
+**Why Vite**:
+- ⚡ Lightning-fast HMR (Hot Module Replacement)
+- 🚀 Instant server start
+- 📦 Optimized production builds
+- 🔌 Rich plugin ecosystem
+- 🎯 Native ES modules in development
+
+**Performance**:
+- Dev server: <1 second startup
+- HMR updates: <100ms
+- Build time: 10-30 seconds (production)
+
+**Configuration**: `vite.config.ts`
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': '/src'
+    }
+  }
+})
+```
+
+### TypeScript 5.x
+
+Type-safe JavaScript with strict mode:
+
+**Benefits**:
+- Catch errors at compile-time
+- Excellent IDE autocomplete
+- Self-documenting code
+- Safe refactoring
+- Better collaboration
+
+**Configuration**: `tsconfig.json` with strict mode enabled
+
+## UI Framework
+
+### TailwindCSS 4.0.9
+
+Utility-first CSS framework:
+
+**Advantages**:
+- Rapid UI development
+- Consistent spacing/sizing
+- Built-in responsive design
+- Dark mode support
+- Tiny production bundle (JIT)
+
+**Example**:
+```tsx
+<div className="flex items-center justify-between p-4 rounded-lg bg-card">
+  <h2 className="text-2xl font-bold">Title</h2>
+  <Button variant="outline">Action</Button>
+</div>
+```
+
+### shadcn/ui (New York Style)
+
+Copy-paste component library built on Radix UI:
+
+**Philosophy**:
+- Components live in your codebase (not node_modules)
+- Full customization control
+- Built on accessible Radix primitives
+- TypeScript-first
+- No vendor lock-in
+
+**40+ Components**:
+- Button, Card, Dialog, Dropdown Menu
+- Form, Input, Select, Textarea
+- Table, Tabs, Toast, Tooltip
+- Sidebar, Navigation, Command
+- Accordion, Alert, Avatar, Badge
+- Checkbox, Radio, Switch, Slider
+- And many more...
+
+**Installation**:
+```bash
+npx shadcn@latest add button
+npx shadcn@latest add dialog
+npx shadcn@latest add form
+```
+
+### Radix UI
+
+Unstyled, accessible component primitives:
+
+**Features**:
+- WAI-ARIA compliant out of the box
+- Keyboard navigation built-in
+- Focus management
+- Screen reader support
+- Composable architecture
+
+**Primitives Used** (via shadcn/ui):
+- @radix-ui/react-dialog
+- @radix-ui/react-dropdown-menu
+- @radix-ui/react-select
+- @radix-ui/react-popover
+- @radix-ui/react-tabs
+- @radix-ui/react-accordion
+- 15+ more primitives
+
+## Styling Utilities
+
+### class-variance-authority (CVA)
+
+Type-safe variant management:
+
+```typescript
+import { cva } from "class-variance-authority"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground",
+        destructive: "bg-destructive text-destructive-foreground",
+        outline: "border border-input bg-background",
+        ghost: "hover:bg-accent hover:text-accent-foreground"
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8"
+      }
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default"
+    }
+  }
+)
+```
+
+### clsx + tailwind-merge
+
+Utility for merging Tailwind classes:
+
+```typescript
+// lib/utils.ts
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// Usage
+<div className={cn("base-class", className)} />
+```
+
+### tailwindcss-animate
+
+Animation utilities for Tailwind:
+
+```typescript
+// Animations available:
+animate-spin
+animate-ping
+animate-pulse
+animate-bounce
+animate-fade-in
+animate-slide-in
+// + custom animations
+```
+
+## State Management
+
+### React Hook Form 7.63.0
+
+Performant form management:
+
+**Features**:
+- Minimal re-renders
+- Built-in validation
+- TypeScript support
+- Easy to use API
+- Zod integration
+
+**Example**:
+```typescript
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+
+const formSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8)
+})
+
+function LoginForm() {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema)
+  })
+
+  // Form logic
+}
+```
+
+### Zod 4.1.11
+
+TypeScript-first schema validation:
+
+```typescript
+import { z } from "zod"
+
+const userSchema = z.object({
+  name: z.string().min(2).max(50),
+  email: z.string().email(),
+  age: z.number().min(18).optional(),
+  role: z.enum(["admin", "user", "guest"])
+})
+
+type User = z.infer<typeof userSchema> // TypeScript type inferred
+```
+
+## Routing
+
+### React Router DOM 7.6.2
+
+Client-side routing:
+
+```typescript
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/companies/:id" element={<CompanyDetail />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+```
+
+## UI Components
+
+### Lucide React 0.544.0
+
+Icon library with 1,000+ icons:
+
+```typescript
+import { Check, X, ChevronRight, Menu } from "lucide-react"
+
+<Button>
+  <Check className="mr-2 h-4 w-4" />
+  Confirm
+</Button>
+```
+
+### next-themes
+
+Theme management (dark/light mode):
+
+```typescript
+import { ThemeProvider } from "next-themes"
+
+function App({ children }) {
+  return (
+    <ThemeProvider attribute="class" defaultTheme="system">
+      {children}
+    </ThemeProvider>
+  )
+}
+
+// In components:
+import { useTheme } from "next-themes"
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <Button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+      Toggle Theme
+    </Button>
+  )
+}
+```
+
+## Data Visualization
+
+### Recharts 2.15.4
+
+React chart library:
+
+**Charts Available**:
+- Line Chart
+- Bar Chart
+- Area Chart
+- Pie Chart
+- Composed Chart
+- Scatter Chart
+- Radar Chart
+
+**Example**:
+```typescript
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
+
+<LineChart width={600} height={300} data={data}>
+  <CartesianGrid strokeDasharray="3 3" />
+  <XAxis dataKey="name" />
+  <YAxis />
+  <Tooltip />
+  <Line type="monotone" dataKey="value" stroke="#8884d8" />
+</LineChart>
+```
+
+## Utilities
+
+### date-fns 4.1.0
+
+Modern date utility library:
+
+```typescript
+import { format, parseISO, addDays, isBefore } from 'date-fns'
+
+const formatted = format(new Date(), 'PPP') // Jan 1, 2024
+const tomorrow = addDays(new Date(), 1)
+```
+
+### Sonner 2.0.7
+
+Toast notifications:
+
+```typescript
+import { toast } from "sonner"
+
+// Success toast
+toast.success("Company created successfully")
+
+// Error toast
+toast.error("Failed to save changes")
+
+// Promise toast
+toast.promise(
+  saveData(),
+  {
+    loading: 'Saving...',
+    success: 'Saved!',
+    error: 'Failed to save'
+  }
+)
+```
+
+## Document Handling
+
+### react-pdf
+
+PDF viewing in browser:
+
+```typescript
+import { Document, Page } from 'react-pdf'
+
+<Document file={pdfUrl}>
+  <Page pageNumber={1} />
+</Document>
+```
+
+## Animation
+
+### Framer Motion
+
+Production-ready animation library:
+
+```typescript
+import { motion } from "framer-motion"
+
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3 }}
+>
+  Content
+</motion.div>
+```
+
+## Additional Libraries
+
+### Embla Carousel React 8.6.0
+
+Carousel/slider component:
+
+```typescript
+import useEmblaCarousel from 'embla-carousel-react'
+
+function Carousel() {
+  const [emblaRef] = useEmblaCarousel()
+
+  return (
+    <div ref={emblaRef}>
+      <div className="flex">
+        {items.map(item => <div key={item.id}>{item.content}</div>)}
+      </div>
+    </div>
+  )
+}
+```
+
+### cmdk 1.1.1
+
+Command palette (⌘K menu):
+
+```typescript
+import { Command } from "cmdk"
+
+<Command>
+  <Command.Input placeholder="Type a command..." />
+  <Command.List>
+    <Command.Group heading="Actions">
+      <Command.Item>Create Company</Command.Item>
+      <Command.Item>Upload File</Command.Item>
+    </Command.Group>
+  </Command.List>
+</Command>
+```
+
+### vaul 1.1.2
+
+Drawer component:
+
+```typescript
+import { Drawer } from "vaul"
+
+<Drawer.Root>
+  <Drawer.Trigger>Open</Drawer.Trigger>
+  <Drawer.Portal>
+    <Drawer.Content>
+      Drawer content
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
+```
+
+## Development Tools
+
+### ESLint
+
+JavaScript/TypeScript linting:
+
+**Plugins**:
+- eslint-plugin-react
+- eslint-plugin-react-hooks
+- @typescript-eslint/eslint-plugin
+- eslint-plugin-jsx-a11y (accessibility)
+
+### Prettier
+
+Code formatting:
+
+**Config** (`.prettierrc`):
+```json
+{
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5"
+}
+```
+
+## Package Versions Summary
+
+```json
+{
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router-dom": "7.6.2",
+    "vite": "6.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5",
+    "tailwindcss": "4.0.9",
+    "@radix-ui/react-*": "latest",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.7.0",
+    "lucide-react": "0.544.0",
+    "next-themes": "^0.4.4",
+    "react-hook-form": "7.63.0",
+    "zod": "4.1.11",
+    "@hookform/resolvers": "^3.9.1",
+    "recharts": "2.15.4",
+    "date-fns": "4.1.0",
+    "sonner": "2.0.7",
+    "framer-motion": "^11.18.0",
+    "embla-carousel-react": "8.6.0",
+    "cmdk": "1.1.1",
+    "vaul": "1.1.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1"
+  }
+}
+```
+
+## Browser Support
+
+- Chrome/Edge: Last 2 versions
+- Firefox: Last 2 versions
+- Safari: Last 2 versions
+- iOS Safari: 14+
+- Android Chrome: Last 2 versions
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder" href="/frontend/project-structure">
+    Understand the directory organization
+  </Card>
+  <Card title="Component Guide" icon="puzzle-piece" href="/frontend/components">
+    Learn component patterns and usage
+  </Card>
+  <Card title="Theme System" icon="palette" href="/frontend/theme-system">
+    Explore the color system and theming
+  </Card>
+  <Card title="Best Practices" icon="star" href="/frontend/best-practices">
+    Follow coding standards and patterns
+  </Card>
+</CardGroup>

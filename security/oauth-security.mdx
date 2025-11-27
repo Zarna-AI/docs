@@ -1,0 +1,335 @@
+---
+title: "OAuth Security"
+description: "OAuth 2.0 security best practices and implementation"
+---
+
+## Overview
+
+Zarna implements OAuth 2.0 for third-party service integrations (Gmail, Outlook, Drive) with enterprise-grade security.
+
+## Security Features
+
+### State Token Protection
+
+**Purpose**: Prevent CSRF attacks in OAuth flow
+
+**Implementation**:
+
+```python
+import secrets
+import base64
+from datetime import datetime, timedelta
+
+def generate_state_token(user_id: str) -> str:
+    """
+    Generate cryptographically secure state token
+    """
+    state_data = {
+        "user_id": user_id,
+        "timestamp": datetime.now().isoformat(),
+        "nonce": secrets.token_urlsafe(32),  # 256-bit random
+        "expires_at": (datetime.now() + timedelta(minutes=15)).isoformat()
+    }
+
+    # Base64 encode for URL safety
+    state = base64.urlsafe_b64encode(
+        json.dumps(state_data).encode()
+    ).decode()
+
+    # Store server-side for validation
+    redis.setex(f"oauth_state:{state}", 900, json.dumps(state_data))
+
+    return state
+```
+
+**Security Properties**:
+- **Cryptographically random**: Uses secrets module (CSPRNG)
+- **Time-limited**: 15-minute expiration
+- **Single-use**: Deleted after validation
+- **Server-side storage**: Can't be tampered with
+- **User-specific**: Tied to user_id
+
+### State Validation
+
+```python
+def validate_state(state: str) -> dict:
+    """
+    Validate OAuth state token
+    """
+    # Check if state exists in Redis
+    state_data = redis.get(f"oauth_state:{state}")
+
+    if not state_data:
+        raise HTTPException(400, "Invalid or expired state token")
+
+    data = json.loads(state_data)
+
+    # Verify not expired
+    expires_at = datetime.fromisoformat(data["expires_at"])
+    if datetime.now() > expires_at:
+        redis.delete(f"oauth_state:{state}")
+        raise HTTPException(400, "State token expired")
+
+    # Single-use: delete after validation
+    redis.delete(f"oauth_state:{state}")
+
+    return data
+```
+
+## Token Storage
+
+### Backend Storage
+
+**What to Store**:
+- ✅ Composio account ID
+- ✅ User ID
+- ✅ Provider name
+- ✅ Email address
+- ❌ Never store raw OAuth tokens (Composio handles this)
+
+```python
+# Store in database
+supabase.table("email_oauth_tokens").insert({
+    "user_id": user_id,
+    "provider": "google",
+    "email": email_address,
+    "composio_account_id": account_id,  # Not the OAuth token!
+    "created_at": datetime.now()
+}).execute()
+```
+
+### Frontend Storage
+
+**Development**: Not needed (Composio manages tokens)
+**Production**: Only store connection status, not tokens
+
+```typescript
+// ✅ Good - Only store status
+interface ConnectedAccount {
+  email: string
+  provider: 'google' | 'microsoft'
+  connected_at: string
+}
+
+// ❌ Bad - Never store OAuth tokens
+// localStorage.setItem('oauth_token', token)  // DON'T DO THIS
+```
+
+## Redirect URI Validation
+
+### Strict Matching
+
+```python
+ALLOWED_REDIRECT_URIS = [
+    "http://localhost:8000/email_bot/gmail/oauth/callback",
+    "https://api.zarna.com/email_bot/gmail/oauth/callback"
+]
+
+def validate_redirect_uri(uri: str):
+    if uri not in ALLOWED_REDIRECT_URIS:
+        raise HTTPException(400, "Invalid redirect URI")
+```
+
+### Production Configuration
+
+```python
+# Environment-based
+REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI")
+
+# Must match exactly in OAuth provider dashboard
+# No wildcards, no partial matches
+```
+
+## Scope Management
+
+### Minimal Scopes
+
+Only request necessary permissions:
+
+```python
+# ✅ Good - Minimal scopes
+GMAIL_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly"
+]
+
+# ❌ Bad - Excessive scopes
+GMAIL_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.full_access",  # Too broad
+    "https://www.googleapis.com/auth/drive.full"          # Unnecessary
+]
+```
+
+### Scope Escalation
+
+Request additional scopes separately:
+
+```python
+# Initial request: just email reading
+initial_scopes = ["gmail.readonly"]
+
+# Later, when user wants to send:
+# Request incremental authorization
+additional_scopes = ["gmail.send"]
+```
+
+## Token Refresh
+
+### Automatic Refresh
+
+Composio handles token refresh automatically:
+
+```python
+# No manual refresh needed
+# Composio refreshes tokens before expiration
+# Webhook notifies of refresh events
+
+@app.post("/webhooks/composio")
+async def handle_webhook(payload: dict):
+    if payload["event"] == "token.refreshed":
+        # Log refresh event
+        logger.info(f"Token refreshed for account {payload['account_id']}")
+```
+
+## Webhook Security
+
+### Signature Verification
+
+```python
+import hmac
+import hashlib
+
+def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    """
+    Verify webhook signature from Composio
+    """
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(signature, expected_signature)
+
+@app.post("/webhooks/composio")
+async def handle_webhook(request: Request):
+    payload = await request.body()
+    signature = request.headers.get("X-Composio-Signature")
+
+    if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
+        raise HTTPException(401, "Invalid signature")
+
+    # Process webhook
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use state parameter always">
+    State parameter is REQUIRED for CSRF protection
+  </Accordion>
+
+  <Accordion title="Validate redirect URIs strictly">
+    No wildcards, exact matches only
+  </Accordion>
+
+  <Accordion title="Store minimal data">
+    Only store account IDs, not raw tokens
+  </Accordion>
+
+  <Accordion title="Implement token refresh">
+    Handle token expiration gracefully
+  </Accordion>
+
+  <Accordion title="Use HTTPS in production">
+    OAuth must use HTTPS for redirect URIs
+  </Accordion>
+
+  <Accordion title="Time-limit state tokens">
+    15 minutes maximum
+  </Accordion>
+
+  <Accordion title="Verify webhook signatures">
+    Always validate webhook authenticity
+  </Accordion>
+</AccordionGroup>
+
+## Common Vulnerabilities
+
+### CSRF Attack
+
+**Attack**: Malicious site initiates OAuth without state parameter
+
+**Defense**: Always use and validate state parameter
+
+```python
+# ✅ Protected
+state = generate_secure_state(user_id)
+auth_url = f"{oauth_url}?state={state}"
+
+# Callback
+validate_state(callback_state)  # Raises error if invalid
+```
+
+### Token Leakage
+
+**Attack**: Tokens exposed in logs, URLs, or client-side
+
+**Defense**:
+- Never log full tokens
+- Use POST for token exchange (not GET)
+- Store server-side only
+
+```python
+# ✅ Good - Sanitized logging
+logger.info(f"Token exchange for user {user_id}")
+
+# ❌ Bad - Logs token
+logger.info(f"Token: {access_token}")
+```
+
+### Redirect URI Manipulation
+
+**Attack**: Attacker changes redirect URI to steal authorization code
+
+**Defense**: Strict redirect URI validation
+
+```python
+# ✅ Protected
+if redirect_uri not in ALLOWED_URIS:
+    raise HTTPException(400, "Invalid redirect URI")
+```
+
+## Compliance
+
+### GDPR
+
+- Users can disconnect OAuth accounts
+- Data deleted when account disconnected
+- Export OAuth connection data
+
+### SOC 2
+
+- Audit all OAuth events
+- Monitor for suspicious OAuth activity
+- Regular token rotation
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Complete OAuth implementation
+  </Card>
+  <Card title="API Security" icon="shield" href="/security/api-security">
+    API protection
+  </Card>
+  <Card title="Data Protection" icon="database" href="/security/data-protection">
+    RLS and encryption
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [OAuth 2.0 RFC 6749](https://tools.ietf.org/html/rfc6749)
+- [OAuth Security Best Practices](https://tools.ietf.org/html/rfc8252)
+- [OWASP OAuth Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/OAuth2_Cheat_Sheet.html)

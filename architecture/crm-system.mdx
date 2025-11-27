@@ -1,0 +1,320 @@
+---
+title: "CRM System Architecture"
+description: "Customer Relationship Management system design and data model"
+---
+
+## Overview
+
+The CRM system is the core of Zarna, managing companies, contacts, deals, interactions, and financials with firm-level isolation.
+
+## Data Model
+
+### Entity Relationships
+
+```
+┌──────────┐
+│  Firms   │
+└────┬─────┘
+     │
+     ├─────────> Users (firm members)
+     │
+     ├─────────> Companies
+     │              │
+     │              ├──────> Contacts (people at companies)
+     │              │
+     │              ├──────> Deals (opportunities)
+     │              │
+     │              ├──────> Files (documents)
+     │              │
+     │              ├──────> Interactions (meetings, calls)
+     │              │
+     │              └──────> Financials (financial records)
+     │
+     └─────────> Global settings
+```
+
+### Core Entities
+
+<CardGroup cols={2}>
+  <Card title="Companies" icon="building">
+    Primary entities - businesses being tracked
+  </Card>
+  <Card title="Contacts" icon="user">
+    People associated with companies
+  </Card>
+  <Card title="Deals" icon="handshake">
+    Opportunities and transactions
+  </Card>
+  <Card title="Interactions" icon="comments">
+    Touchpoints (meetings, calls, emails)
+  </Card>
+  <Card title="Financials" icon="dollar-sign">
+    Financial records and metrics
+  </Card>
+  <Card title="Notes" icon="note-sticky">
+    Unstructured notes and observations
+  </Card>
+</CardGroup>
+
+## Company Management
+
+### Company Lifecycle
+
+```
+Lead → Prospect → Active → Portfolio → Exit
+  ↓        ↓         ↓         ↓        ↓
+Initial  Qualified Active   Invested  Sold/
+contact  interest  talks    company   IPO
+```
+
+### Company Data Structure
+
+```typescript
+interface Company {
+  id: string
+  firm_id: string
+  name: string
+  industry: string
+  revenue: number
+  ebitda: number
+  employees: number
+  founded_year: number
+  location: string
+  website: string
+  description: string
+  status: 'lead' | 'prospect' | 'active' | 'portfolio' | 'exited'
+  created_at: string
+  updated_at: string
+
+  // Relationships
+  contacts: Contact[]
+  deals: Deal[]
+  files: File[]
+  interactions: Interaction[]
+  financials: Financial[]
+}
+```
+
+## Deal Pipeline
+
+### Pipeline Stages
+
+```
+Lead → Qualification → Proposal → Negotiation → Closed Won/Lost
+10%        30%            50%         75%          100%/0%
+```
+
+### Deal Tracking
+
+```typescript
+interface Deal {
+  id: string
+  name: string
+  company_id: string
+  value: number
+  stage: 'lead' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
+  probability: number  // 0-100
+  owner_id: string
+  close_date: string
+  created_at: string
+}
+```
+
+## Contact Management
+
+### Contact Hierarchy
+
+```
+Company
+  └─> Contacts
+        ├─> Primary Contact (main POC)
+        ├─> Decision Makers (C-level, VPs)
+        ├─> Influencers (Directors, Managers)
+        └─> Other Contacts
+```
+
+### Relationship Tracking
+
+```typescript
+interface Contact {
+  id: string
+  company_id: string
+  name: string
+  email: string
+  phone: string
+  role: string
+  is_decision_maker: boolean
+  linkedin: string
+  created_at: string
+
+  // Relationships
+  interactions: Interaction[]
+  deals: Deal[]  // Deals they're involved in
+}
+```
+
+## Activity Tracking
+
+### Interaction Types
+
+- **Meetings**: In-person or video calls
+- **Calls**: Phone conversations
+- **Emails**: Email communications
+- **Notes**: General observations
+
+### Timeline View
+
+```typescript
+interface Interaction {
+  id: string
+  type: 'meeting' | 'call' | 'email' | 'note'
+  company_id: string
+  contact_ids: string[]
+  subject: string
+  notes: string
+  date: string
+  duration_minutes?: number
+  created_by: string
+  created_at: string
+}
+```
+
+## Firm Isolation
+
+### How It Works
+
+```
+User Login
+  ↓
+JWT contains firm_id
+  ↓
+All queries filter by firm_id
+  ↓
+RLS policies enforce at database level
+  ↓
+Users only see their firm's data
+```
+
+### Implementation
+
+```python
+# Backend automatically adds firm_id
+@router.get("/companies")
+async def get_companies(request: Request):
+    firm_id = request.state.firm_id  # From JWT
+
+    companies = supabase.table("companies") \
+        .select("*") \
+        .eq("firm_id", firm_id) \  # Firm filter
+        .execute()
+
+    return companies.data
+```
+
+## Data Integrity
+
+### Constraints
+
+```sql
+-- Prevent orphaned records
+ALTER TABLE contacts
+  ADD CONSTRAINT fk_company
+  FOREIGN KEY (company_id)
+  REFERENCES companies(id)
+  ON DELETE CASCADE;  -- Delete contacts when company deleted
+
+-- Ensure valid values
+ALTER TABLE deals
+  ADD CONSTRAINT check_probability
+  CHECK (probability >= 0 AND probability <= 100);
+
+-- Prevent duplicates
+CREATE UNIQUE INDEX idx_companies_name_firm
+  ON companies(firm_id, LOWER(name));
+```
+
+### Triggers
+
+```sql
+-- Auto-update timestamp
+CREATE TRIGGER update_companies_timestamp
+  BEFORE UPDATE ON companies
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+
+-- Cascade status changes
+CREATE TRIGGER cascade_company_status
+  AFTER UPDATE ON companies
+  FOR EACH ROW
+  WHEN (NEW.status = 'archived')
+  EXECUTE FUNCTION archive_related_records();
+```
+
+## Search & Filtering
+
+### Full-Text Search
+
+```sql
+-- Add search index
+CREATE INDEX idx_companies_search
+  ON companies
+  USING GIN(to_tsvector('english', name || ' ' || COALESCE(description, '')));
+
+-- Search query
+SELECT * FROM companies
+WHERE to_tsvector('english', name || ' ' || description)
+  @@ to_tsquery('english', 'technology & saas');
+```
+
+### Advanced Filtering
+
+```typescript
+interface CompanyFilters {
+  industry?: string[]
+  revenue_min?: number
+  revenue_max?: number
+  employees_min?: number
+  employees_max?: number
+  location?: string[]
+  status?: string[]
+  founded_after?: number
+  founded_before?: number
+  has_active_deals?: boolean
+}
+```
+
+## AI Integration
+
+### CRM Agent
+
+Natural language queries against CRM data:
+
+```
+"Show me all tech companies in SF with revenue over $10M"
+  ↓
+SQL: SELECT * FROM companies
+     WHERE industry = 'Technology'
+     AND location LIKE '%San Francisco%'
+     AND revenue > 10000000
+```
+
+<Card title="CRM Agent Service" icon="robot" href="/backend/services/crm-agent">
+  AI-powered CRM operations
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="System Overview" icon="diagram-project" href="/architecture/system-overview">
+    Complete architecture
+  </Card>
+  <Card title="Data Flow" icon="diagram-next" href="/architecture/data-flow">
+    Request/response lifecycle
+  </Card>
+  <Card title="Database Overview" icon="database" href="/backend/database/overview">
+    Database architecture
+  </Card>
+  <Card title="Companies API" icon="code" href="/api-reference/companies">
+    API documentation
+  </Card>
+</CardGroup>

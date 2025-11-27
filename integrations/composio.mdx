@@ -1,0 +1,430 @@
+---
+title: "Composio Integration"
+description: "OAuth and API integration platform for 100+ apps"
+---
+
+## Overview
+
+Composio provides unified OAuth flows and API access for Gmail, Outlook, Google Drive, Calendar, and 100+ other applications.
+
+**Website**: [composio.dev](https://composio.dev)
+
+## What is Composio?
+
+Composio simplifies third-party integrations by providing:
+
+- **Unified OAuth**: Single flow for multiple providers
+- **Token Management**: Automatic token refresh
+- **API Abstraction**: Consistent API across different services
+- **Webhook Handling**: Real-time notifications
+- **Security**: Enterprise-grade security and compliance
+
+## Services Integrated
+
+<CardGroup cols={2}>
+  <Card title="Gmail" icon="envelope">
+    Email OAuth, sending, reading, searching
+  </Card>
+  <Card title="Outlook" icon="envelope-open">
+    Microsoft email OAuth and operations
+  </Card>
+  <Card title="Google Drive" icon="google">
+    File sync and storage
+  </Card>
+  <Card title="Google Calendar" icon="calendar">
+    Event management and scheduling
+  </Card>
+</CardGroup>
+
+## Setup
+
+### 1. Create Composio Account
+
+1. Go to [composio.dev](https://composio.dev)
+2. Sign up for an account
+3. Create a new project
+
+### 2. Get API Key
+
+From Composio Dashboard → Settings → API Keys:
+
+```bash
+# Add to .env
+COMPOSIO_API_KEY=your-composio-api-key
+```
+
+### 3. Configure OAuth Apps
+
+For each service (Gmail, Outlook, Drive, Calendar):
+
+1. **Go to Composio Dashboard** → Integrations
+2. **Select integration** (e.g., Gmail)
+3. **Create Auth Config**
+4. **Set callback URL**: `http://localhost:8000/email_bot/gmail/oauth/callback`
+5. **Copy Auth Config ID**:
+
+```bash
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-config-id
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-config-id
+COMPOSIO_DRIVE_AUTH_CONFIG_ID=your-config-id
+COMPOSIO_CALENDAR_AUTH_CONFIG_ID=your-config-id
+```
+
+## OAuth Flow with Composio
+
+### Initialization
+
+```python
+from composio import Composio
+
+composio = Composio(api_key=os.getenv("COMPOSIO_API_KEY"))
+
+# Build auth URL
+auth_url = composio.get_auth_url(
+    entity_id=user_id,  # Your user ID
+    auth_config_id=os.getenv("COMPOSIO_GMAIL_AUTH_CONFIG_ID"),
+    redirect_url="http://localhost:8000/oauth/callback"
+)
+
+# Redirect user to auth_url
+return {"auth_url": auth_url}
+```
+
+### Callback Handling
+
+```python
+@app.get("/oauth/callback")
+async def oauth_callback(
+    connected_account_id: str,
+    status: str,
+    state: str
+):
+    """
+    Handle OAuth callback from Composio
+    """
+    if status != "success":
+        return {"error": "OAuth failed"}
+
+    # Get connected account details
+    account = composio.get_connected_account(connected_account_id)
+
+    # Store in database
+    supabase.table("oauth_tokens").insert({
+        "user_id": user_id,
+        "provider": "google",
+        "composio_account_id": connected_account_id,
+        "email": account.email
+    }).execute()
+
+    return {"success": True}
+```
+
+## Using Composio Tools
+
+### Gmail
+
+```python
+from composio import ComposioToolSet
+
+toolset = ComposioToolSet(api_key=composio_api_key)
+
+# Get profile
+profile = toolset.execute_action(
+    action="GMAIL_GET_PROFILE",
+    entity_id=user_id
+)
+
+# Send email
+result = toolset.execute_action(
+    action="GMAIL_SEND_EMAIL",
+    entity_id=user_id,
+    params={
+        "to": "recipient@example.com",
+        "subject": "Hello",
+        "body": "Email content"
+    }
+)
+
+# Search emails
+emails = toolset.execute_action(
+    action="GMAIL_SEARCH_EMAILS",
+    entity_id=user_id,
+    params={
+        "query": "from:sender@example.com",
+        "max_results": 10
+    }
+)
+```
+
+### Outlook
+
+```python
+# Get profile
+profile = toolset.execute_action(
+    action="OUTLOOK_OUTLOOK_GET_PROFILE",
+    entity_id=user_id
+)
+
+# Send email
+result = toolset.execute_action(
+    action="OUTLOOK_SEND_EMAIL",
+    entity_id=user_id,
+    params={
+        "to": "recipient@example.com",
+        "subject": "Hello",
+        "body": "Email content"
+    }
+)
+```
+
+### Google Drive
+
+```python
+# List files
+files = toolset.execute_action(
+    action="GOOGLEDRIVE_LIST_FILES",
+    entity_id=user_id,
+    params={
+        "page_size": 100,
+        "query": "name contains 'report'"
+    }
+)
+
+# Download file
+content = toolset.execute_action(
+    action="GOOGLEDRIVE_DOWNLOAD_FILE",
+    entity_id=user_id,
+    params={
+        "file_id": "file-id-here"
+    }
+)
+
+# Upload file
+upload = toolset.execute_action(
+    action="GOOGLEDRIVE_UPLOAD_FILE",
+    entity_id=user_id,
+    params={
+        "name": "document.pdf",
+        "content": file_content,
+        "mime_type": "application/pdf"
+    }
+)
+```
+
+### Google Calendar
+
+```python
+# List events
+events = toolset.execute_action(
+    action="GOOGLECALENDAR_LIST_EVENTS",
+    entity_id=user_id,
+    params={
+        "time_min": "2024-01-01T00:00:00Z",
+        "time_max": "2024-12-31T23:59:59Z",
+        "max_results": 100
+    }
+)
+
+# Create event
+event = toolset.execute_action(
+    action="GOOGLECALENDAR_CREATE_EVENT",
+    entity_id=user_id,
+    params={
+        "summary": "Meeting with Acme Corp",
+        "start": "2024-01-22T14:00:00Z",
+        "end": "2024-01-22T15:00:00Z",
+        "attendees": ["contact@acme.com"]
+    }
+)
+```
+
+## Entity Management
+
+### What is an Entity?
+
+An entity in Composio represents a user in your system:
+
+- **entity_id**: Your user's UUID
+- **Connected Accounts**: OAuth accounts connected by this entity
+- **Isolation**: Each entity's tokens are separate
+
+### Create Entity
+
+```python
+composio.create_entity(entity_id=user_id)
+```
+
+### Get Entity
+
+```python
+entity = composio.get_entity(entity_id=user_id)
+print(f"Connected accounts: {entity.connected_accounts}")
+```
+
+## Security
+
+### Token Storage
+
+Composio handles token storage securely:
+
+- Tokens never exposed to you
+- Automatic token refresh
+- Encrypted at rest
+- Compliance certifications
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use entity-based isolation">
+    Always pass user_id as entity_id to ensure proper isolation
+  </Accordion>
+
+  <Accordion title="Store only account IDs">
+    Store `connected_account_id`, not raw OAuth tokens
+  </Accordion>
+
+  <Accordion title="Handle webhook signatures">
+    Verify webhook signatures to prevent spoofing
+  </Accordion>
+
+  <Accordion title="Implement error handling">
+    OAuth can fail - handle errors gracefully
+  </Accordion>
+</AccordionGroup>
+
+## Environment Variables
+
+```bash
+# Composio API
+COMPOSIO_API_KEY=your-composio-api-key
+
+# OAuth Auth Config IDs
+COMPOSIO_GMAIL_AUTH_CONFIG_ID=your-gmail-config
+COMPOSIO_OUTLOOK_AUTH_CONFIG_ID=your-outlook-config
+COMPOSIO_DRIVE_AUTH_CONFIG_ID=your-drive-config
+COMPOSIO_CALENDAR_AUTH_CONFIG_ID=your-calendar-config
+
+# Callback URL base
+API_BASE_URL=http://localhost:8000
+```
+
+## Webhooks
+
+### Set Up Webhooks
+
+```python
+# Register webhook
+composio.create_webhook(
+    url="https://api.zarna.com/webhooks/composio",
+    events=["account.connected", "account.disconnected", "token.refreshed"]
+)
+```
+
+### Handle Webhooks
+
+```python
+@app.post("/webhooks/composio")
+async def handle_composio_webhook(request: Request):
+    """
+    Handle Composio webhooks
+    """
+    payload = await request.json()
+    signature = request.headers.get("X-Composio-Signature")
+
+    # Verify signature
+    if not composio.verify_webhook(payload, signature):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    # Handle events
+    if payload["event"] == "account.connected":
+        # User connected new account
+        account_id = payload["connected_account_id"]
+        # Update database
+
+    elif payload["event"] == "token.refreshed":
+        # Token was refreshed
+        pass
+
+    return {"status": "received"}
+```
+
+## Available Actions
+
+### Gmail Actions
+
+- `GMAIL_GET_PROFILE` - Get user profile
+- `GMAIL_SEND_EMAIL` - Send email
+- `GMAIL_SEARCH_EMAILS` - Search emails
+- `GMAIL_GET_EMAIL` - Get specific email
+- `GMAIL_CREATE_DRAFT` - Create draft
+- `GMAIL_DELETE_EMAIL` - Delete email
+
+### Outlook Actions
+
+- `OUTLOOK_OUTLOOK_GET_PROFILE` - Get user profile
+- `OUTLOOK_SEND_EMAIL` - Send email
+- `OUTLOOK_LIST_EMAILS` - List emails
+- `OUTLOOK_GET_EMAIL` - Get specific email
+
+### Drive Actions
+
+- `GOOGLEDRIVE_LIST_FILES` - List files
+- `GOOGLEDRIVE_DOWNLOAD_FILE` - Download file
+- `GOOGLEDRIVE_UPLOAD_FILE` - Upload file
+- `GOOGLEDRIVE_DELETE_FILE` - Delete file
+- `GOOGLEDRIVE_SHARE_FILE` - Share file
+
+### Calendar Actions
+
+- `GOOGLECALENDAR_LIST_EVENTS` - List events
+- `GOOGLECALENDAR_CREATE_EVENT` - Create event
+- `GOOGLECALENDAR_UPDATE_EVENT` - Update event
+- `GOOGLECALENDAR_DELETE_EVENT` - Delete event
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="OAuth callback not working">
+    **Solution**:
+    - Verify callback URL matches exactly in Composio dashboard
+    - Check API_BASE_URL is set correctly
+    - Ensure backend is accessible from internet (use ngrok for local dev)
+  </Accordion>
+
+  <Accordion title="Token refresh failing">
+    **Solution**:
+    - Check Composio API key is valid
+    - Verify OAuth scopes include offline_access
+    - Check account hasn't been revoked by user
+  </Accordion>
+
+  <Accordion title="Action execution failing">
+    **Solution**:
+    - Verify entity_id exists and has connected account
+    - Check action parameters are correct
+    - Review Composio logs in dashboard
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OAuth Setup Guide" icon="key" href="/integrations/oauth-setup">
+    Complete OAuth implementation guide
+  </Card>
+  <Card title="Gmail Integration" icon="envelope" href="/api-reference/email-bot">
+    Email bot API
+  </Card>
+  <Card title="Drive Integration" icon="google" href="/integrations/google-drive">
+    Google Drive setup
+  </Card>
+  <Card title="Calendar Integration" icon="calendar" href="/integrations/calendar">
+    Calendar integration
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [Composio Documentation](https://docs.composio.dev)
+- [Composio API Reference](https://docs.composio.dev/api-reference)
+- [OAuth 2.0 Specification](https://oauth.net/2/)

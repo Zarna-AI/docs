@@ -1,0 +1,118 @@
+---
+title: "Email Bot API"
+description: "Automated email handling and AI-powered composition"
+---
+
+## Overview
+
+The Email Bot API provides endpoints for automated email handling, AI-powered composition, and email tracking.
+
+**Base Path**: `/email_bot`
+
+## Endpoints
+
+### Compose Email
+
+Generate email draft with AI.
+
+```bash
+POST /email_bot/compose
+```
+
+**Request Body**:
+
+```json
+{
+  "recipient": "john@acmecorp.com",
+  "company_name": "Acme Corp",
+  "purpose": "follow_up",
+  "context": "Following up on partnership discussion",
+  "tone": "professional",
+  "length": "medium"
+}
+```
+
+**Response**:
+
+```json
+{
+  "subject": "Following up on our partnership discussion",
+  "body": "Hi John,\n\nIt was great meeting with you last week...",
+  "suggested_send_time": "2024-01-23T09:00:00Z"
+}
+```
+
+### Send Email
+
+Send email via connected Gmail/Outlook account.
+
+```bash
+POST /email_bot/send
+```
+
+**Request Body**:
+
+```json
+{
+  "to": ["john@acmecorp.com"],
+  "subject": "Partnership proposal",
+  "body": "Email content...",
+  "provider": "google",
+  "cc": [],
+  "bcc": [],
+  "attachments": []
+}
+```
+
+**Response**:
+
+```json
+{
+  "sent": true,
+  "message_id": "msg-123",
+  "sent_at": "2024-01-22T11:00:00Z"
+}
+```
+
+### Gmail OAuth
+
+#### Initialize OAuth
+
+```bash
+POST /email_bot/gmail/oauth/init
+```
+
+#### OAuth Callback
+
+```bash
+GET /email_bot/gmail/oauth/callback
+```
+
+### Outlook OAuth
+
+#### Initialize OAuth
+
+```bash
+POST /email_bot/outlook/oauth/init
+```
+
+#### OAuth Callback
+
+```bash
+GET /email_bot/outlook/oauth/callback
+```
+
+<Card title="Complete OAuth Guide" icon="key" href="/integrations/oauth-setup">
+  See the full OAuth setup documentation
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Email Agent Service" icon="server" href="/backend/services/email-agent">
+    Backend implementation
+  </Card>
+  <Card title="OAuth Setup" icon="plug" href="/integrations/oauth-setup">
+    Configure email OAuth
+  </Card>
+</CardGroup>

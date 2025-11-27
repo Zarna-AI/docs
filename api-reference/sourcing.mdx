@@ -1,0 +1,220 @@
+---
+title: "Sourcing API"
+description: "AI-powered company discovery and sourcing with Exa"
+---
+
+## Overview
+
+The Sourcing API provides AI-powered company discovery using Exa's semantic search engine to find companies matching specific criteria.
+
+**Base Path**: `/api/sourcing`
+
+## Endpoints
+
+### Search Companies
+
+Search for companies using natural language or specific criteria.
+
+```bash
+POST /api/sourcing/search
+```
+
+**Request Body**:
+
+```json
+{
+  "query": "Find B2B SaaS companies in healthcare with 50-200 employees and $5-20M revenue",
+  "filters": {
+    "industry": ["Healthcare", "Medical Technology"],
+    "revenue_range": {
+      "min": 5000000,
+      "max": 20000000
+    },
+    "employee_range": {
+      "min": 50,
+      "max": 200
+    },
+    "location": ["United States"],
+    "founded_after": 2015
+  },
+  "limit": 20
+}
+```
+
+**Example Request**:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "B2B SaaS companies in healthcare",
+    "limit": 10
+  }' \
+  "http://localhost:8000/api/sourcing/search"
+```
+
+**Response**:
+
+```json
+{
+  "results": [
+    {
+      "name": "HealthTech Solutions",
+      "domain": "healthtech.com",
+      "description": "B2B SaaS platform for hospital management",
+      "industry": "Healthcare Technology",
+      "estimated_revenue": 12000000,
+      "estimated_employees": 85,
+      "founded": 2018,
+      "location": "Boston, MA",
+      "website": "https://healthtech.com",
+      "linkedin": "https://linkedin.com/company/healthtech",
+      "relevance_score": 0.92
+    }
+  ],
+  "total": 20,
+  "query_id": "ff0e8400-e29b-41d4-a716-446655441000"
+}
+```
+
+### Save to CRM
+
+Save sourced company to CRM.
+
+```bash
+POST /api/sourcing/save-to-crm
+```
+
+**Request Body**:
+
+```json
+{
+  "company_data": {
+    "name": "HealthTech Solutions",
+    "website": "https://healthtech.com",
+    "industry": "Healthcare Technology",
+    "revenue": 12000000,
+    "employees": 85,
+    "location": "Boston, MA"
+  },
+  "source": "exa_sourcing",
+  "query_id": "ff0e8400-e29b-41d4-a716-446655441000"
+}
+```
+
+**Response**:
+
+```json
+{
+  "company_id": "gg0e8400-e29b-41d4-a716-446655441111",
+  "message": "Company added to CRM",
+  "duplicate_check": {
+    "is_duplicate": false,
+    "potential_matches": []
+  }
+}
+```
+
+## Query Examples
+
+### Natural Language
+
+```json
+{
+  "query": "Find cybersecurity startups in NYC founded after 2020"
+}
+```
+
+### Industry-Specific
+
+```json
+{
+  "query": "Manufacturing companies with automation technology in the Midwest"
+}
+```
+
+### Growth-Focused
+
+```json
+{
+  "query": "Fast-growing e-commerce companies with 100%+ YoY growth"
+}
+```
+
+### Geographic
+
+```json
+{
+  "query": "Fintech companies in London or Berlin"
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Company name |
+| `domain` | string | Primary domain |
+| `description` | string | Company description |
+| `industry` | string | Primary industry |
+| `estimated_revenue` | number | Estimated annual revenue |
+| `estimated_employees` | number | Estimated employee count |
+| `founded` | integer | Year founded |
+| `location` | string | Headquarters location |
+| `website` | string | Company website |
+| `linkedin` | string | LinkedIn URL |
+| `relevance_score` | number | Match quality (0-1) |
+
+## Frontend Integration
+
+```typescript
+async function searchCompanies(query: string) {
+  const response = await fetch('http://localhost:8000/api/sourcing/search', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query, limit: 20 })
+  })
+
+  const data = await response.json()
+  return data.results
+}
+
+// Save to CRM
+async function saveToCRM(company: any) {
+  const response = await fetch('http://localhost:8000/api/sourcing/save-to-crm', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ company_data: company })
+  })
+
+  return response.json()
+}
+```
+
+## Configuration
+
+```bash
+# Environment variable
+EXA_API_KEY=your-exa-api-key
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Manage sourced companies
+  </Card>
+  <Card title="CRM Agent" icon="robot" href="/backend/services/crm-agent">
+    AI-powered CRM operations
+  </Card>
+  <Card title="Frontend Sourcing" icon="magnifying-glass" href="/frontend/features/sourcing">
+    Sourcing dashboard UI
+  </Card>
+</CardGroup>

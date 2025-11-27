@@ -1,0 +1,353 @@
+---
+title: "Architecture Overview"
+description: "High-level overview of Zarna's system architecture and design patterns"
+---
+
+## System Architecture
+
+Zarna is built as a **modern monorepo** with three main applications that work together to deliver a comprehensive private equity workflow platform.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         User's Browser                          │
+│                                                                 │
+│  ┌─────────────────┐              ┌──────────────────────────┐ │
+│  │  Zarna Frontend │              │   Zarna Website          │ │
+│  │  (React + Vite) │              │   (Marketing Site)       │ │
+│  └────────┬────────┘              └──────────────────────────┘ │
+└───────────┼─────────────────────────────────────────────────────┘
+            │
+            │ REST API Calls (HTTP/HTTPS)
+            │
+┌───────────▼─────────────────────────────────────────────────────┐
+│                      Zarna Backend                              │
+│                   (FastAPI + Python)                            │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              25+ API Routers                              │  │
+│  │  Companies · Contacts · Deals · Files · Reports ·        │  │
+│  │  Email · Calendar · Drive · SharePoint · Egnyte          │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              Core Services                                │  │
+│  │  • CRM Agent (AI-powered CRM operations)                 │  │
+│  │  • Document Processing (Docling, OCR, PDF extraction)    │  │
+│  │  • Email Agent (Automated email handling)                │  │
+│  │  • Report Generation (Streaming AI reports)              │  │
+│  │  • Agentic Chat (Multi-agent system with pool manager)   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+            │
+            ├──────────────┬─────────────────┬──────────────┐
+            │              │                 │              │
+     ┌──────▼──────┐ ┌────▼────┐     ┌─────▼──────┐ ┌────▼─────┐
+     │  Supabase   │ │Anthropic│     │  Composio  │ │   Exa    │
+     │ (PostgreSQL)│ │  Claude │     │  (OAuth)   │ │(Sourcing)│
+     └─────────────┘ └─────────┘     └────────────┘ └──────────┘
+```
+
+## Core Components
+
+### 1. Frontend Application
+
+**Technology**: React 19 + Vite 6.2 + TailwindCSS 4
+
+The frontend is a modern single-page application (SPA) that provides:
+
+- **User Interface**: Built with shadcn/ui components for consistency
+- **State Management**: Context API for authentication and global state
+- **Routing**: React Router for client-side navigation
+- **Real-time Updates**: WebSocket connections for live data
+- **Theme System**: Dark/light mode with OKLCH color space
+
+**Key Features**:
+- CRM dashboard and management
+- Document viewing and processing
+- Report generation with streaming
+- Company sourcing interface
+- Email agent settings
+- Calendar integration
+
+<Card title="Learn More" icon="paintbrush" href="/frontend/overview">
+  Explore the frontend architecture in detail
+</Card>
+
+### 2. Backend API
+
+**Technology**: FastAPI + Python 3.8+ + Uvicorn
+
+The backend serves as the central hub for all data operations and business logic:
+
+- **API Routers**: 25+ routers organized by domain (CRM, files, emails, etc.)
+- **Authentication**: JWT-based auth with middleware
+- **Database**: Supabase PostgreSQL with Row Level Security
+- **AI Services**: Integration with Claude, OpenAI, and other AI platforms
+- **File Processing**: Advanced document extraction and OCR
+
+**Architecture Patterns**:
+- **Router-Service-Repository**: Clean separation of concerns
+- **Middleware**: Auth, CORS, error handling
+- **Async/Await**: Non-blocking I/O for high performance
+- **OpenAPI**: Auto-generated API documentation
+
+<Card title="Learn More" icon="server" href="/backend/overview">
+  Dive into the backend architecture
+</Card>
+
+### 3. Database Layer
+
+**Technology**: Supabase (PostgreSQL) + Row Level Security
+
+The database handles all persistent data with:
+
+- **CRM Tables**: companies, contacts, deals, interactions
+- **File Management**: files, upload tracking, processing status
+- **User Management**: users, firms, permissions
+- **Integration Data**: OAuth tokens, sync status
+- **Analytics**: Usage tracking, metrics
+
+**Security Features**:
+- Row Level Security (RLS) policies per table
+- Firm-level data isolation
+- Encrypted sensitive fields
+- Audit logging
+
+<Card title="Learn More" icon="database" href="/backend/database/overview">
+  Understand the database schema
+</Card>
+
+## Data Flow
+
+### Request/Response Cycle
+
+```
+1. User Action (Frontend)
+   ↓
+2. API Request (REST/JSON)
+   ↓
+3. JWT Authentication (Middleware)
+   ↓
+4. Router Endpoint
+   ↓
+5. Service Layer (Business Logic)
+   ↓
+6. Database Query (Supabase)
+   ↓
+7. Response (JSON)
+   ↓
+8. Frontend Update (React State)
+```
+
+### Document Processing Flow
+
+```
+1. User Uploads File
+   ↓
+2. File Saved to Storage
+   ↓
+3. Processing Job Created
+   ↓
+4. Docling Extraction
+   ↓
+5. OCR (if needed)
+   ↓
+6. AI Analysis (Claude)
+   ↓
+7. Structured Data Extracted
+   ↓
+8. Saved to Database
+   ↓
+9. Frontend Notified
+```
+
+### AI Report Generation Flow
+
+```
+1. User Requests Report
+   ↓
+2. Query Understanding (AI)
+   ↓
+3. Data Collection (Multi-source)
+   ↓
+4. Agent Pool Assignment
+   ↓
+5. Parallel Agent Execution
+   ↓
+6. Report Synthesis (Streaming)
+   ↓
+7. Real-time Display (Frontend)
+```
+
+## Key Design Principles
+
+### 1. Modularity
+
+Each component is designed to be independent and replaceable:
+
+- **Routers**: Each domain has its own router with clear boundaries
+- **Services**: Business logic is encapsulated in services
+- **AI Agents**: Specialized agents for different tasks
+- **Integrations**: Plugin architecture for external services
+
+### 2. Scalability
+
+Architecture supports both vertical and horizontal scaling:
+
+- **Agent Pools**: Pre-warmed agents eliminate cold starts
+- **Async Processing**: Non-blocking operations for concurrency
+- **Database Indexing**: Optimized queries for large datasets
+- **Caching**: Redis-ready architecture (coming soon)
+
+### 3. Security First
+
+Security is built into every layer:
+
+- **Authentication**: JWT tokens with refresh mechanism
+- **Authorization**: Role-based access control (RBAC)
+- **Data Isolation**: Firm-level separation via RLS
+- **Encryption**: At-rest and in-transit encryption
+- **Audit Logs**: Complete activity tracking
+
+### 4. Developer Experience
+
+Built with modern development practices:
+
+- **Type Safety**: TypeScript (frontend) and type hints (backend)
+- **Auto-reload**: Hot module replacement for fast iteration
+- **API Docs**: Auto-generated Swagger/OpenAPI documentation
+- **Testing**: Comprehensive test coverage (unit + integration)
+- **Linting**: ESLint, Prettier, Black for code quality
+
+## Integration Architecture
+
+### External Services
+
+Zarna integrates with multiple external platforms:
+
+<CardGroup cols={2}>
+  <Card title="OAuth Providers" icon="key">
+    Gmail, Outlook via Composio platform
+  </Card>
+  <Card title="Cloud Storage" icon="cloud">
+    Google Drive, SharePoint, Egnyte, Basecamp
+  </Card>
+  <Card title="AI Services" icon="brain">
+    Anthropic Claude, OpenAI, AutoGen
+  </Card>
+  <Card title="Search & Sourcing" icon="magnifying-glass">
+    Exa for AI-powered company discovery
+  </Card>
+</CardGroup>
+
+### Integration Patterns
+
+1. **OAuth2 Flow**: Secure user authorization via Composio
+2. **Webhook Receivers**: Real-time updates from external services
+3. **Polling Services**: Scheduled sync for non-webhook services
+4. **API Wrappers**: Abstraction layer for external APIs
+
+## Deployment Architecture
+
+### Development Environment
+
+```
+Local Machine
+├── Frontend: localhost:3000 (Vite dev server)
+├── Backend: localhost:8000 (Uvicorn with reload)
+└── Database: cloud.supabase.co (shared dev instance)
+```
+
+### Production Environment
+
+```
+Cloud Infrastructure
+├── Frontend: Vercel/Netlify (Static hosting + CDN)
+├── Backend: Railway/Render (Container deployment)
+├── Database: Supabase (Production tier)
+└── File Storage: Supabase Storage (S3-compatible)
+```
+
+## Performance Optimizations
+
+### Frontend
+
+- **Code Splitting**: Lazy-loaded routes and components
+- **Image Optimization**: Next.js Image component
+- **Bundle Analysis**: Tree-shaking unused code
+- **Caching**: Service workers for offline support (coming soon)
+
+### Backend
+
+- **Agent Pools**: Eliminate 5-11s cold start latency
+- **Database Indexing**: Optimized query performance
+- **Connection Pooling**: Reuse database connections
+- **Response Streaming**: Incremental data delivery for reports
+
+### Database
+
+- **Indexes**: Strategic indexing on frequently queried columns
+- **Materialized Views**: Pre-computed aggregations
+- **Partitioning**: Time-based partitioning for large tables (coming soon)
+- **Read Replicas**: Separate read and write workloads (coming soon)
+
+## Technology Stack Summary
+
+<Accordion title="Frontend Stack">
+  - **React 19**: UI library with Server Components
+  - **Vite 6.2**: Build tool and dev server
+  - **TailwindCSS 4**: Utility-first CSS
+  - **shadcn/ui**: Component library
+  - **Radix UI**: Accessible primitives
+  - **React Hook Form**: Form management
+  - **Zod**: Schema validation
+  - **TypeScript**: Type safety
+</Accordion>
+
+<Accordion title="Backend Stack">
+  - **FastAPI**: Web framework
+  - **Uvicorn**: ASGI server
+  - **Pydantic**: Data validation
+  - **SQLAlchemy**: ORM (optional)
+  - **Supabase Client**: Database access
+  - **Anthropic SDK**: Claude AI
+  - **Docling**: Document processing
+  - **AutoGen**: Multi-agent AI
+  - **Python 3.8+**: Language runtime
+</Accordion>
+
+<Accordion title="Infrastructure">
+  - **Supabase**: PostgreSQL database + auth
+  - **Vercel/Netlify**: Frontend hosting
+  - **Railway/Render**: Backend hosting
+  - **GitHub**: Version control
+  - **Composio**: OAuth management
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tech Stack Details" icon="layer-group" href="/getting-started/tech-stack">
+    Explore each technology in depth
+  </Card>
+  <Card title="Frontend Guide" icon="browser" href="/frontend/overview">
+    Learn about the React application
+  </Card>
+  <Card title="Backend Guide" icon="server" href="/backend/overview">
+    Understand the FastAPI architecture
+  </Card>
+  <Card title="Integrations" icon="plug" href="/integrations/oauth-setup">
+    Set up external service connections
+  </Card>
+</CardGroup>
+
+## Architecture Deep Dives
+
+For more detailed architecture information:
+
+- [CRM System Architecture](/architecture/crm-system)
+- [Agent Pool System](/architecture/agent-pool)
+- [Agentic System Design](/architecture/agentic-system)
+- [File Processing Pipeline](/architecture/file-processing)
+- [Data Flow Diagrams](/architecture/data-flow)
+- [Authentication Flow](/architecture/authentication-flow)

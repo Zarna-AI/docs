@@ -1,0 +1,501 @@
+---
+title: "Document Processing Service"
+description: "Advanced document extraction with Docling, OCR, and AI analysis"
+---
+
+## Overview
+
+The Document Processing Service extracts structured data from various document formats including PDFs, DOCX, PPTX, and scanned images using Docling, EasyOCR, and AI analysis.
+
+**Primary Files**:
+- `scripts/enhanced_extraction_service.py` - Main extraction service
+- `scripts/batched_cim_service.py` - Batch CIM processing
+- `scripts/cim_analysis_service.py` - CIM analysis with AI
+
+## Supported Document Types
+
+<CardGroup cols={2}>
+  <Card title="PDF Documents" icon="file-pdf">
+    Financial statements, CIMs, pitch decks, contracts
+  </Card>
+  <Card title="Word Documents" icon="file-word">
+    DOCX files with text, tables, and images
+  </Card>
+  <Card title="PowerPoint" icon="file-powerpoint">
+    PPTX presentations with slides and content
+  </Card>
+  <Card title="Scanned Images" icon="image">
+    OCR for scanned documents and images
+  </Card>
+  <Card title="HTML Pages" icon="file-code">
+    Web pages and HTML documents
+  </Card>
+  <Card title="Excel Spreadsheets" icon="file-excel">
+    XLSX with tables and financial data
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+### Docling
+
+Primary document processing engine:
+
+- **Layout Analysis**: Understands document structure
+- **Table Extraction**: Preserves table relationships
+- **Image Extraction**: Extracts embedded images
+- **Metadata Extraction**: Document properties
+- **Multi-format Support**: PDF, DOCX, PPTX, HTML
+
+### EasyOCR
+
+Optical Character Recognition for scanned documents:
+
+- **80+ Languages**: Multi-language support
+- **GPU Acceleration**: Fast processing
+- **High Accuracy**: Good for printed text
+- **Batch Processing**: Process multiple images
+
+### PDFPlumber
+
+Fallback for PDF processing:
+
+- **Text Extraction**: Pure text from PDFs
+- **Table Extraction**: Better table detection than PyPDF2
+- **Layout Preservation**: Maintains spatial relationships
+
+### Claude AI
+
+Post-processing and analysis:
+
+- **Content Summarization**: Extract key points
+- **Entity Extraction**: Companies, people, dates, numbers
+- **Classification**: Document type detection
+- **Data Structuring**: Convert to JSON schema
+
+## Processing Pipeline
+
+```
+1. File Upload
+   ↓
+2. File Type Detection
+   ↓
+3. Docling Extraction
+   ├─ Text Extraction
+   ├─ Table Extraction
+   ├─ Image Extraction
+   └─ Layout Analysis
+   ↓
+4. OCR (if needed)
+   └─ EasyOCR Processing
+   ↓
+5. AI Analysis
+   ├─ Claude Summarization
+   ├─ Entity Extraction
+   └─ Data Structuring
+   ↓
+6. Database Storage
+   └─ Structured JSON in Supabase
+   ↓
+7. Frontend Notification
+   └─ Real-time update via WebSocket
+```
+
+## Enhanced Extraction Service
+
+### Main Service
+
+**File**: `scripts/enhanced_extraction_service.py`
+
+```python
+class EnhancedExtractionService:
+    """
+    Advanced document extraction with Docling + AI
+    """
+
+    def __init__(self):
+        self.docling = DoclingClient()
+        self.ocr = easyocr.Reader(['en'])
+        self.claude = Anthropic()
+
+    async def process_document(self, file_path: str) -> dict:
+        """
+        Process document and extract structured data
+        """
+        # Detect file type
+        file_type = self.detect_type(file_path)
+
+        # Extract content
+        if file_type == 'pdf':
+            content = await self.extract_pdf(file_path)
+        elif file_type == 'docx':
+            content = await self.extract_docx(file_path)
+        elif file_type == 'image':
+            content = await self.extract_image(file_path)
+
+        # AI analysis
+        structured_data = await self.analyze_content(content)
+
+        return structured_data
+```
+
+### Extraction Methods
+
+#### PDF Extraction
+
+```python
+async def extract_pdf(self, pdf_path: str) -> dict:
+    """
+    Extract content from PDF using Docling
+    """
+    result = {
+        'text': '',
+        'tables': [],
+        'images': [],
+        'metadata': {}
+    }
+
+    # Use Docling for extraction
+    doc = self.docling.process(pdf_path)
+
+    # Extract text
+    result['text'] = doc.get_text()
+
+    # Extract tables
+    for table in doc.get_tables():
+        result['tables'].append({
+            'headers': table.headers,
+            'rows': table.rows,
+            'page': table.page_number
+        })
+
+    # Extract images
+    for image in doc.get_images():
+        result['images'].append({
+            'data': image.data,
+            'page': image.page_number
+        })
+
+    # Metadata
+    result['metadata'] = doc.get_metadata()
+
+    return result
+```
+
+#### OCR Processing
+
+```python
+async def extract_image(self, image_path: str) -> dict:
+    """
+    OCR processing for scanned documents
+    """
+    # Run OCR
+    ocr_results = self.ocr.readtext(image_path)
+
+    # Structure results
+    text_blocks = []
+    for bbox, text, confidence in ocr_results:
+        if confidence > 0.5:  # Filter low confidence
+            text_blocks.append({
+                'text': text,
+                'confidence': confidence,
+                'bbox': bbox
+            })
+
+    return {
+        'text': ' '.join([b['text'] for b in text_blocks]),
+        'blocks': text_blocks
+    }
+```
+
+#### AI Analysis
+
+```python
+async def analyze_content(self, content: dict) -> dict:
+    """
+    AI-powered content analysis
+    """
+    prompt = f"""
+    Analyze this document content and extract:
+    1. Document type (CIM, pitch deck, financial statement, etc.)
+    2. Key entities (companies, people, dates, numbers)
+    3. Summary (2-3 sentences)
+    4. Important metrics or data points
+
+    Content:
+    {content['text']}
+
+    Tables:
+    {json.dumps(content['tables'])}
+
+    Return as JSON.
+    """
+
+    response = await self.claude.messages.create(
+        model="claude-3-sonnet-20240229",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return json.loads(response.content[0].text)
+```
+
+## CIM Processing
+
+### Confidential Information Memorandum
+
+**File**: `scripts/batched_cim_service.py`
+
+Specialized processing for CIMs:
+
+```python
+class CIMProcessor:
+    """
+    Extract structured data from CIMs
+    """
+
+    def process_cim(self, cim_path: str) -> dict:
+        """
+        Extract CIM-specific data
+        """
+        extraction = self.extract_document(cim_path)
+
+        return {
+            'company_overview': self.extract_overview(extraction),
+            'financial_metrics': self.extract_financials(extraction),
+            'market_analysis': self.extract_market_data(extraction),
+            'management_team': self.extract_team(extraction),
+            'deal_structure': self.extract_deal_info(extraction)
+        }
+```
+
+### Key Sections Extracted
+
+1. **Company Overview**
+   - Company name, industry, location
+   - Business description
+   - Products/services
+
+2. **Financial Metrics**
+   - Revenue, EBITDA, margins
+   - Growth rates
+   - Historical performance
+
+3. **Market Analysis**
+   - Market size, growth
+   - Competitive landscape
+   - Market positioning
+
+4. **Management Team**
+   - Key executives
+   - Experience and background
+
+5. **Deal Structure**
+   - Valuation, deal size
+   - Terms and conditions
+   - Timeline
+
+## API Integration
+
+### File Upload Endpoint
+
+```python
+# api/app/routers/files.py
+
+@router.post("/files/upload")
+async def upload_file(
+    file: UploadFile,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user)
+):
+    """
+    Upload and process document
+    """
+    # Save file
+    file_path = await save_upload(file)
+
+    # Queue processing
+    background_tasks.add_task(
+        process_document_async,
+        file_path,
+        user.id,
+        user.firm_id
+    )
+
+    return {
+        "status": "processing",
+        "file_id": file_id
+    }
+```
+
+### Processing Status
+
+```python
+@router.get("/files/{file_id}/status")
+async def get_processing_status(file_id: str):
+    """
+    Check document processing status
+    """
+    file = supabase.table("files").select("*").eq("id", file_id).single()
+
+    return {
+        "status": file['processing_status'],  # pending, processing, completed, failed
+        "progress": file['progress'],  # 0-100
+        "extracted_data": file['extracted_data'] if file['processing_status'] == 'completed' else None
+    }
+```
+
+## Request/Response Examples
+
+### Upload Request
+
+```bash
+POST /api/files/upload
+Authorization: Bearer TOKEN
+Content-Type: multipart/form-data
+
+file: @document.pdf
+company_id: uuid-123
+document_type: cim
+```
+
+### Upload Response
+
+```json
+{
+  "status": "processing",
+  "file_id": "uuid-456",
+  "message": "Document uploaded successfully. Processing in background."
+}
+```
+
+### Status Response
+
+```json
+{
+  "status": "completed",
+  "progress": 100,
+  "extracted_data": {
+    "document_type": "cim",
+    "company": "Acme Corp",
+    "summary": "Technology company specializing in SaaS solutions...",
+    "financials": {
+      "revenue": 50000000,
+      "ebitda": 15000000,
+      "ebitda_margin": 0.30
+    },
+    "sections": {
+      "overview": "...",
+      "market_analysis": "...",
+      "management": [...]
+    }
+  }
+}
+```
+
+## Performance Optimization
+
+### Async Processing
+
+```python
+async def process_document_async(file_path, user_id, firm_id):
+    """
+    Background processing
+    """
+    try:
+        # Update status to processing
+        update_status(file_id, "processing")
+
+        # Process document
+        service = EnhancedExtractionService()
+        result = await service.process_document(file_path)
+
+        # Save results
+        save_extraction(file_id, result)
+
+        # Update status to completed
+        update_status(file_id, "completed")
+
+        # Notify frontend
+        notify_completion(user_id, file_id)
+
+    except Exception as e:
+        update_status(file_id, "failed", error=str(e))
+        notify_error(user_id, file_id, str(e))
+```
+
+### Batch Processing
+
+```python
+async def process_batch(file_ids: List[str]):
+    """
+    Process multiple files in parallel
+    """
+    tasks = [
+        process_document_async(file_id)
+        for file_id in file_ids
+    ]
+
+    results = await asyncio.gather(*tasks)
+    return results
+```
+
+### Caching
+
+```python
+# Cache extraction results
+cache_key = f"extraction:{file_hash}"
+if cached := redis.get(cache_key):
+    return json.loads(cached)
+
+# Process and cache
+result = await process_document(file_path)
+redis.set(cache_key, json.dumps(result), ex=3600)
+```
+
+## Error Handling
+
+```python
+try:
+    result = await process_document(file_path)
+except UnsupportedFormatError:
+    return {"error": "File format not supported"}
+except OCRError:
+    return {"error": "OCR processing failed. Document may be too low quality"}
+except AIAnalysisError:
+    # Still return raw extraction
+    return {"extracted_data": raw_data, "warning": "AI analysis incomplete"}
+```
+
+## Configuration
+
+```bash
+# Environment variables
+DOCLING_API_KEY=your-key
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+
+# Processing settings
+MAX_FILE_SIZE_MB=100
+OCR_LANGUAGES=en,es,fr
+AI_MODEL=claude-3-sonnet-20240229
+
+# Performance
+MAX_CONCURRENT_PROCESSING=5
+PROCESSING_TIMEOUT_SECONDS=300
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="File API" icon="file" href="/api-reference/files">
+    File upload and management endpoints
+  </Card>
+  <Card title="CRM Integration" icon="building" href="/backend/services/crm-agent">
+    Linking extracted data to CRM
+  </Card>
+  <Card title="Report Generation" icon="chart-line" href="/backend/services/report-generation">
+    Using extracted data in reports
+  </Card>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    Complete backend architecture
+  </Card>
+</CardGroup>

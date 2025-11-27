@@ -1,0 +1,383 @@
+---
+title: "Files API"
+description: "Upload, process, and manage documents"
+---
+
+## Overview
+
+The Files API handles document upload, processing, and retrieval. Supports PDF, DOCX, PPTX, images, and more.
+
+**Base Path**: `/api/files`
+
+## Endpoints
+
+### Upload File
+
+Upload a document for processing.
+
+```bash
+POST /api/files/upload
+```
+
+**Content-Type**: `multipart/form-data`
+
+**Form Fields**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | file | Yes | The file to upload |
+| `company_id` | UUID | No | Associated company |
+| `document_type` | string | No | Type (cim, pitch_deck, financial, contract) |
+| `description` | string | No | File description |
+
+**Example Request**:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer TOKEN" \
+  -F "file=@document.pdf" \
+  -F "company_id=550e8400-e29b-41d4-a716-446655440000" \
+  -F "document_type=cim" \
+  "http://localhost:8000/api/files/upload"
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "id": "990e8400-e29b-41d4-a716-446655440444",
+  "filename": "document.pdf",
+  "size": 2048576,
+  "content_type": "application/pdf",
+  "document_type": "cim",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "processing_status": "pending",
+  "uploaded_at": "2024-01-22T10:30:00Z",
+  "url": "/api/files/990e8400-e29b-41d4-a716-446655440444"
+}
+```
+
+### Get File
+
+Get file metadata and status.
+
+```bash
+GET /api/files/{file_id}
+```
+
+**Example Request**:
+
+```bash
+curl -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/files/990e8400-e29b-41d4-a716-446655440444"
+```
+
+**Response**:
+
+```json
+{
+  "id": "990e8400-e29b-41d4-a716-446655440444",
+  "filename": "acme_cim_2024.pdf",
+  "size": 2048576,
+  "content_type": "application/pdf",
+  "document_type": "cim",
+  "company_id": "550e8400-e29b-41d4-a716-446655440000",
+  "company_name": "Acme Corp",
+  "processing_status": "completed",
+  "progress": 100,
+  "extracted_data": {
+    "document_type": "cim",
+    "company": "Acme Corp",
+    "summary": "Technology company...",
+    "financials": {
+      "revenue": 15000000,
+      "ebitda": 4500000
+    }
+  },
+  "uploaded_at": "2024-01-22T10:30:00Z",
+  "processed_at": "2024-01-22T10:32:45Z",
+  "download_url": "/api/files/990e8400-e29b-41d4-a716-446655440444/download"
+}
+```
+
+### Download File
+
+Download the original file.
+
+```bash
+GET /api/files/{file_id}/download
+```
+
+**Example Request**:
+
+```bash
+curl -H "Authorization: Bearer TOKEN" \
+  -O "http://localhost:8000/api/files/990e8400-e29b-41d4-a716-446655440444/download"
+```
+
+**Response**: Binary file content
+
+### Get Processing Status
+
+Check document processing status.
+
+```bash
+GET /api/files/{file_id}/status
+```
+
+**Response**:
+
+```json
+{
+  "status": "processing",
+  "progress": 65,
+  "current_step": "ai_analysis",
+  "estimated_completion": "2024-01-22T10:35:00Z"
+}
+```
+
+**Status Values**:
+- `pending`: Queued for processing
+- `processing`: Currently being processed
+- `completed`: Processing finished
+- `failed`: Processing error occurred
+
+### List Files
+
+Get a paginated list of files.
+
+```bash
+GET /api/files
+```
+
+**Query Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number |
+| `page_size` | integer | Items per page |
+| `company_id` | UUID | Filter by company |
+| `document_type` | string | Filter by type |
+| `status` | string | Filter by processing status |
+
+**Example Request**:
+
+```bash
+curl -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/files?company_id=550e8400-e29b-41d4-a716-446655440000&status=completed"
+```
+
+**Response**:
+
+```json
+{
+  "data": [
+    {
+      "id": "990e8400-e29b-41d4-a716-446655440444",
+      "filename": "acme_cim_2024.pdf",
+      "document_type": "cim",
+      "processing_status": "completed",
+      "uploaded_at": "2024-01-22T10:30:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+### Delete File
+
+Delete a file.
+
+```bash
+DELETE /api/files/{file_id}
+```
+
+**Example Request**:
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer TOKEN" \
+  "http://localhost:8000/api/files/990e8400-e29b-41d4-a716-446655440444"
+```
+
+**Response** (204 No Content)
+
+## Processing Flow
+
+```
+1. Upload → File saved to storage
+2. Pending → Queued for processing
+3. Processing → Docling extraction + OCR + AI analysis
+4. Completed → Extracted data available
+```
+
+## Supported File Types
+
+| Type | Extensions | Max Size |
+|------|------------|----------|
+| PDF | `.pdf` | 100 MB |
+| Word | `.doc`, `.docx` | 50 MB |
+| PowerPoint | `.ppt`, `.pptx` | 50 MB |
+| Excel | `.xls`, `.xlsx` | 50 MB |
+| Images | `.jpg`, `.png`, `.tiff` | 20 MB |
+| HTML | `.html`, `.htm` | 10 MB |
+
+## Extracted Data Structure
+
+### For CIMs
+
+```json
+{
+  "document_type": "cim",
+  "company": "Acme Corp",
+  "industry": "Technology",
+  "summary": "Leading SaaS provider...",
+  "financials": {
+    "revenue": 15000000,
+    "ebitda": 4500000,
+    "ebitda_margin": 0.30,
+    "revenue_growth": 0.25
+  },
+  "market": {
+    "size": 500000000,
+    "growth_rate": 0.15
+  },
+  "team": [
+    {
+      "name": "John Doe",
+      "role": "CEO",
+      "experience": "15 years in SaaS"
+    }
+  ],
+  "deal": {
+    "valuation": 75000000,
+    "structure": "Equity sale"
+  }
+}
+```
+
+### For Financial Statements
+
+```json
+{
+  "document_type": "financial_statement",
+  "period": "2024 Q4",
+  "revenue": 5000000,
+  "expenses": 3500000,
+  "net_income": 1500000,
+  "balance_sheet": {
+    "assets": 20000000,
+    "liabilities": 8000000,
+    "equity": 12000000
+  },
+  "tables": [...]
+}
+```
+
+## Examples
+
+### Upload with Frontend
+
+```typescript
+async function uploadFile(file: File, companyId: string) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('company_id', companyId)
+  formData.append('document_type', 'cim')
+
+  const response = await fetch('http://localhost:8000/api/files/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  })
+
+  return response.json()
+}
+```
+
+### Monitor Processing
+
+```typescript
+async function monitorProcessing(fileId: string) {
+  const interval = setInterval(async () => {
+    const response = await fetch(
+      `http://localhost:8000/api/files/${fileId}/status`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    )
+
+    const { status, progress } = await response.json()
+
+    console.log(`Status: ${status}, Progress: ${progress}%`)
+
+    if (status === 'completed' || status === 'failed') {
+      clearInterval(interval)
+    }
+  }, 2000)
+}
+```
+
+### Python Upload
+
+```python
+import requests
+
+files = {'file': open('document.pdf', 'rb')}
+data = {
+    'company_id': '550e8400-e29b-41d4-a716-446655440000',
+    'document_type': 'cim'
+}
+
+response = requests.post(
+    'http://localhost:8000/api/files/upload',
+    headers={'Authorization': f'Bearer {token}'},
+    files=files,
+    data=data
+)
+
+file_info = response.json()
+print(f"File ID: {file_info['id']}")
+print(f"Status: {file_info['processing_status']}")
+```
+
+## Error Handling
+
+| Code | Error | Description |
+|------|-------|-------------|
+| 400 | `file_too_large` | File exceeds maximum size |
+| 400 | `unsupported_format` | File type not supported |
+| 404 | `file_not_found` | File ID doesn't exist |
+| 422 | `processing_failed` | Document processing error |
+| 507 | `storage_full` | Insufficient storage space |
+
+**Error Response**:
+
+```json
+{
+  "detail": "File too large. Maximum size is 100MB for PDF files.",
+  "error_code": "file_too_large",
+  "max_size_mb": 100
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Document Processing" icon="gear" href="/backend/services/document-processing">
+    Learn about the processing pipeline
+  </Card>
+  <Card title="Companies API" icon="building" href="/api-reference/companies">
+    Associate files with companies
+  </Card>
+  <Card title="Reports API" icon="chart-line" href="/api-reference/reports">
+    Generate reports from extracted data
+  </Card>
+  <Card title="API Introduction" icon="book" href="/api-reference/introduction">
+    General API documentation
+  </Card>
+</CardGroup>

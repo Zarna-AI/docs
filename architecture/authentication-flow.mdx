@@ -1,0 +1,473 @@
+---
+title: "Authentication Flow"
+description: "JWT authentication and OAuth integration patterns"
+---
+
+## Overview
+
+Zarna uses a two-part authentication system:
+1. **JWT Authentication** for API access
+2. **OAuth 2.0** for third-party service integration (Gmail, Outlook, Drive)
+
+## JWT Authentication Flow
+
+### Login Flow
+
+```
+┌──────────┐
+│  User    │
+│  Login   │
+│  Form    │
+└────┬─────┘
+     │ 1. Submit credentials
+     ↓
+┌──────────────────┐
+│  POST /auth/login│
+│  (Backend)       │
+└────┬─────────────┘
+     │ 2. Validate credentials
+     ↓
+┌──────────────────┐
+│  Supabase Auth   │
+│  Verify User     │
+└────┬─────────────┘
+     │ 3. User validated
+     ↓
+┌──────────────────┐
+│  Generate JWT    │
+│  Token           │
+│  • user_id       │
+│  • firm_id       │
+│  • role          │
+│  • exp: 24h      │
+└────┬─────────────┘
+     │ 4. Return token
+     ↓
+┌──────────────────┐
+│  Frontend        │
+│  Stores Token    │
+│  • localStorage  │
+│  • Memory        │
+│  • Cookie        │
+└────┬─────────────┘
+     │ 5. Include in requests
+     ↓
+┌──────────────────┐
+│  Subsequent      │
+│  API Calls       │
+│  Authorization:  │
+│  Bearer {token}  │
+└──────────────────┘
+```
+
+### JWT Token Structure
+
+**Header**:
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+
+**Payload**:
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "firm_id": "770e8400-e29b-41d4-a716-446655440222",
+  "email": "user@example.com",
+  "role": "admin",
+  "iat": 1706000000,
+  "exp": 1706086400
+}
+```
+
+**Signature**:
+```
+HMACSHA256(
+  base64UrlEncode(header) + "." + base64UrlEncode(payload),
+  SUPABASE_JWT_SECRET
+)
+```
+
+### API Request Flow
+
+```
+1. Frontend makes API request
+   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   │
+   ↓
+2. JWTAuthMiddleware intercepts request
+   │
+   ├─> Extracts token from Authorization header
+   ├─> Decodes and validates token
+   ├─> Checks expiration
+   ├─> Verifies signature
+   │
+   ↓
+3. Token Valid?
+   │
+   ├─> YES: Attach user info to request.state
+   │   └─> Continue to router
+   │
+   └─> NO: Return 401 Unauthorized
+       └─> Frontend redirects to login
+```
+
+### Token Validation
+
+```python
+# Backend middleware
+from fastapi import Request, HTTPException
+from jose import jwt, JWTError
+import os
+
+async def validate_token(request: Request):
+    """
+    Validate JWT token from Authorization header
+    """
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing authentication token")
+
+    token = auth_header.split(" ")[1]
+
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv("SUPABASE_JWT_SECRET"),
+            algorithms=["HS256"]
+        )
+
+        # Attach user info to request
+        request.state.user_id = payload["user_id"]
+        request.state.firm_id = payload["firm_id"]
+        request.state.user_email = payload["email"]
+
+        return payload
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+```
+
+### Token Refresh
+
+```
+┌──────────────┐
+│  Token       │
+│  Expires     │
+│  (24h)       │
+└──────┬───────┘
+       │
+       ↓
+┌──────────────────────┐
+│ Frontend detects     │
+│ 401 Unauthorized     │
+└──────┬───────────────┘
+       │
+       ↓
+┌──────────────────────┐
+│ POST /auth/refresh   │
+│ With refresh token   │
+└──────┬───────────────┘
+       │
+       ↓
+┌──────────────────────┐
+│ New JWT generated    │
+│ Refresh token rotated│
+└──────┬───────────────┘
+       │
+       ↓
+┌──────────────────────┐
+│ Update stored tokens │
+│ Retry original request│
+└──────────────────────┘
+```
+
+## OAuth 2.0 Flow (Gmail/Outlook)
+
+### Authorization Code Flow
+
+```
+┌──────────────┐
+│    User      │
+│ Clicks       │
+│"Connect      │
+│ Gmail"       │
+└──────┬───────┘
+       │ 1. Initiate OAuth
+       ↓
+┌─────────────────────────┐
+│ POST /oauth/init        │
+│ (Backend)               │
+│                         │
+│ • Generate state token  │
+│ • Store in memory       │
+│ • Build auth URL        │
+└──────┬──────────────────┘
+       │ 2. Return auth URL
+       ↓
+┌─────────────────────────┐
+│ Redirect to Composio    │
+│ OAuth Page              │
+│                         │
+│ • User selects account  │
+│ • Grants permissions    │
+└──────┬──────────────────┘
+       │ 3. User authorizes
+       ↓
+┌─────────────────────────┐
+│ Composio redirects to   │
+│ /oauth/callback         │
+│                         │
+│ Query params:           │
+│ • state                 │
+│ • connected_account_id  │
+│ • status                │
+└──────┬──────────────────┘
+       │ 4. Process callback
+       ↓
+┌─────────────────────────┐
+│ Backend validates       │
+│ • Check state matches   │
+│ • Verify not expired    │
+│ • Get email from        │
+│   Composio API          │
+└──────┬──────────────────┘
+       │ 5. Store credentials
+       ↓
+┌─────────────────────────┐
+│ Save to Supabase        │
+│ • email_oauth_tokens    │
+│ • email_config          │
+└──────┬──────────────────┘
+       │ 6. Redirect to frontend
+       ↓
+┌─────────────────────────┐
+│ Frontend shows success  │
+│ • Display toast         │
+│ • Refresh email list    │
+│ • Clean URL params      │
+└─────────────────────────┘
+```
+
+### State Token Security
+
+```python
+import secrets
+import base64
+import json
+from datetime import datetime, timedelta
+
+def generate_state_token(user_id: str) -> str:
+    """
+    Generate secure state token for OAuth
+    """
+    state_data = {
+        "user_id": user_id,
+        "timestamp": datetime.now().isoformat(),
+        "nonce": secrets.token_urlsafe(16),
+        "expires_at": (datetime.now() + timedelta(minutes=15)).isoformat()
+    }
+
+    # Encode as base64
+    state_json = json.dumps(state_data)
+    state = base64.urlsafe_b64encode(state_json.encode()).decode()
+
+    # Store in memory for validation
+    oauth_states[state] = state_data
+
+    return state
+```
+
+### State Validation
+
+```python
+def validate_state(state: str) -> dict:
+    """
+    Validate OAuth state token
+    """
+    # Check if state exists
+    if state not in oauth_states:
+        raise HTTPException(status_code=400, detail="Invalid state token")
+
+    state_data = oauth_states[state]
+
+    # Check expiration (15 minutes)
+    expires_at = datetime.fromisoformat(state_data["expires_at"])
+    if datetime.now() > expires_at:
+        del oauth_states[state]
+        raise HTTPException(status_code=400, detail="State token expired")
+
+    # Single-use: delete after validation
+    del oauth_states[state]
+
+    return state_data
+```
+
+## Row Level Security (RLS)
+
+### Firm-Level Isolation
+
+All database queries automatically filter by firm:
+
+```sql
+-- Companies table RLS policy
+CREATE POLICY "firm_isolation_policy"
+ON companies
+FOR ALL
+USING (
+  firm_id IN (
+    SELECT firm_id FROM users WHERE id = auth.uid()
+  )
+);
+```
+
+### Implementation
+
+```python
+# Backend automatically includes firm_id
+@router.get("/companies")
+async def get_companies(request: Request):
+    """
+    Get companies for authenticated user's firm
+    """
+    firm_id = request.state.firm_id  # From JWT
+
+    companies = supabase.table("companies") \
+        .select("*") \
+        .eq("firm_id", firm_id) \  # Firm isolation
+        .execute()
+
+    return companies.data
+```
+
+## Session Management
+
+### Frontend Session Handling
+
+```typescript
+// context/AuthContext.tsx
+interface AuthContextType {
+  user: User | null
+  token: string | null
+  login: (email: string, password: string) => Promise<void>
+  logout: () => void
+  refreshToken: () => Promise<void>
+}
+
+export function AuthProvider({ children }: Props) {
+  const [user, setUser] = useState<User | null>(null)
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem('access_token')
+  )
+
+  // Auto-refresh token before expiration
+  useEffect(() => {
+    if (token) {
+      const decoded = jwtDecode(token)
+      const expiresIn = decoded.exp * 1000 - Date.now()
+
+      // Refresh 5 minutes before expiration
+      const refreshTime = expiresIn - (5 * 60 * 1000)
+
+      const timer = setTimeout(refreshToken, refreshTime)
+      return () => clearTimeout(timer)
+    }
+  }, [token])
+
+  // Login function
+  const login = async (email: string, password: string) => {
+    const response = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+
+    const data = await response.json()
+
+    setToken(data.access_token)
+    setUser(data.user)
+    localStorage.setItem('access_token', data.access_token)
+  }
+
+  // Logout function
+  const logout = () => {
+    setToken(null)
+    setUser(null)
+    localStorage.removeItem('access_token')
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, token, login, logout, refreshToken }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+```
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Token Storage">
+    **Development**: localStorage acceptable
+    **Production**: HttpOnly cookies recommended
+
+    ```typescript
+    // Set cookie on backend
+    response.set_cookie(
+      "access_token",
+      token,
+      httponly=True,
+      secure=True,
+      samesite="strict"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Token Expiration">
+    - Access token: 24 hours
+    - Refresh token: 7 days
+    - Rotate refresh tokens on each use
+  </Accordion>
+
+  <Accordion title="HTTPS Only">
+    Always use HTTPS in production:
+    - Prevents token interception
+    - Encrypts all data in transit
+    - Required for secure cookies
+  </Accordion>
+
+  <Accordion title="CORS Configuration">
+    Whitelist specific origins only:
+
+    ```python
+    app.add_middleware(
+      CORSMiddleware,
+      allow_origins=[
+        "https://app.zarna.com",  # Production frontend
+        "http://localhost:3000"  # Development only
+      ],
+      allow_credentials=True
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="OAuth Setup" icon="key" href="/integrations/oauth-setup">
+    Set up Gmail and Outlook OAuth
+  </Card>
+  <Card title="API Security" icon="shield" href="/security/api-security">
+    API security best practices
+  </Card>
+  <Card title="Backend Auth" icon="lock" href="/backend/authentication">
+    Backend authentication implementation
+  </Card>
+  <Card title="System Overview" icon="diagram-project" href="/architecture/system-overview">
+    Overall system architecture
+  </Card>
+</CardGroup>

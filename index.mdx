@@ -1,97 +1,177 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Welcome to Zarna"
+description: "AI-powered CRM and due diligence platform for private equity and investment firms"
 ---
 
-## Setting up
+## What is Zarna?
 
-Get your documentation site up and running in minutes.
+Zarna is a comprehensive financial technology platform designed specifically for private equity and investment firms. It combines CRM functionality, document processing, AI-powered analysis, and workflow automation to streamline deal sourcing, due diligence, and portfolio management.
+
+## Core Features
+
+<Columns cols={2}>
+  <Card
+    title="Intelligent CRM"
+    icon="building"
+    href="/frontend/features/crm"
+  >
+    Manage companies, contacts, deals, and interactions with AI-powered insights and automation.
+  </Card>
+  <Card
+    title="Document Processing"
+    icon="file-lines"
+    href="/backend/services/document-processing"
+  >
+    Extract, analyze, and process financial documents with OCR and AI-powered extraction.
+  </Card>
+  <Card
+    title="AI Reports"
+    icon="chart-line"
+    href="/backend/services/report-generation"
+  >
+    Generate comprehensive reports with real-time streaming and AI analysis.
+  </Card>
+  <Card
+    title="Company Sourcing"
+    icon="magnifying-glass"
+    href="/api-reference/sourcing"
+  >
+    AI-powered company discovery and sourcing with advanced search capabilities.
+  </Card>
+  <Card
+    title="Email Automation"
+    icon="envelope"
+    href="/backend/services/email-agent"
+  >
+    Automated email handling with Gmail/Outlook integration and AI-powered responses.
+  </Card>
+  <Card
+    title="Zarna AI Chatbot"
+    icon="messages"
+    href="/backend/services/agentic-chat"
+  >
+    Natural language interface to your CRM data. Ask questions and get instant insights with our intelligent multi-agent AI chatbot.
+  </Card>
+</Columns>
+
+## Quick Start
+
+Get up and running with Zarna in minutes.
 
 <Card
-  title="Start here"
+  title="Quickstart Guide"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Set up both frontend and backend, and start using Zarna.
 </Card>
 
-## Make it yours
+## Platform Architecture
 
-Design a docs site that looks great and empowers your users.
+Zarna is built on a modern, scalable architecture:
 
 <Columns cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Frontend"
+    icon="browser"
+    href="/frontend/overview"
   >
-    Edit your docs locally and preview them in real time.
+    React 19 + Vite + TailwindCSS with shadcn/ui components
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Backend"
+    icon="server"
+    href="/backend/overview"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    FastAPI + Python with 25+ API routers and AI services
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
+    title="Database"
+    icon="database"
+    href="/integrations/supabase"
+  >
+    Supabase PostgreSQL with real-time subscriptions
+  </Card>
+  <Card
+    title="Integrations"
+    icon="plug"
+    href="/integrations/oauth-setup"
+  >
+    Gmail, Outlook, Drive, SharePoint, Egnyte, Basecamp, and more
+  </Card>
+</Columns>
+
+## Key Technologies
+
+### Frontend Stack
+- **React 19** - Latest React with Server Components support
+- **Vite 6.2** - Lightning-fast build tool and dev server
+- **TailwindCSS 4** - Utility-first CSS framework
+- **shadcn/ui** - High-quality, accessible component library
+- **TypeScript** - Type-safe development
+
+### Backend Stack
+- **FastAPI** - Modern, high-performance Python API framework
+- **Docling** - Advanced document processing
+- **AutoGen** - Multi-agent AI orchestration
+- **Anthropic Claude** - AI-powered analysis and generation
+- **Supabase** - PostgreSQL database with real-time features
+
+## Explore the Documentation
+
+<Columns cols={3}>
+  <Card
+    title="Frontend Guide"
+    icon="paintbrush"
+    href="/frontend/overview"
+  >
+    Learn about components, theming, and UI patterns
+  </Card>
+  <Card
+    title="Backend Guide"
+    icon="code"
+    href="/backend/overview"
+  >
+    Understand services, routers, and API architecture
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
     href="/api-reference/introduction"
   >
-    Auto-generate API documentation from OpenAPI specifications.
+    Complete API documentation for all endpoints
+  </Card>
+  <Card
+    title="Integrations"
+    icon="puzzle-piece"
+    href="/integrations/oauth-setup"
+  >
+    Set up external service connections
+  </Card>
+  <Card
+    title="Architecture"
+    icon="diagram-project"
+    href="/architecture/system-overview"
+  >
+    Deep dive into system design and data flow
+  </Card>
+  <Card
+    title="Development"
+    icon="terminal"
+    href="/development"
+  >
+    Local development setup and workflow
   </Card>
 </Columns>
 
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
+## Need Help?
 
 <Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
+  title="Contact Support"
+  icon="life-ring"
+  href="mailto:support@zarna.com"
+  horizontal
 >
-  Browse our showcase of exceptional documentation sites.
+  Have questions? Reach out to our team for assistance.
 </Card>

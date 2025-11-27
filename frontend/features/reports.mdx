@@ -1,0 +1,154 @@
+---
+title: "Report Generation UI"
+description: "AI-powered report generation with real-time streaming"
+---
+
+## Overview
+
+The Report Generation interface allows users to create comprehensive AI-powered reports with real-time streaming visualization.
+
+**Route**: `/reports`
+
+## Features
+
+- Real-time streaming report generation
+- Multiple report types (DD, Financial, Market)
+- Progress indicators
+- Export options (PDF, DOCX, HTML)
+- Report history and management
+
+## Streaming Report Display
+
+```typescript
+import { useState, useEffect } from 'react'
+import { Card } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import ReactMarkdown from 'react-markdown'
+
+function ReportGenerator({ companyId }: Props) {
+  const [content, setContent] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [currentSection, setCurrentSection] = useState('')
+
+  const generateReport = async () => {
+    setIsGenerating(true)
+    setContent('')
+    setProgress(0)
+
+    const response = await fetch('/api/reports/generate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify({
+        company_id: companyId,
+        report_type: 'due_diligence'
+      })
+    })
+
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value)
+      const lines = chunk.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6))
+
+          if (data.type === 'chunk') {
+            setContent(prev => prev + data.content)
+          } else if (data.type === 'section_start') {
+            setCurrentSection(data.section)
+            setProgress(prev => prev + 10)
+          } else if (data.type === 'complete') {
+            setIsGenerating(false)
+            setProgress(100)
+          }
+        }
+      }
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Generate Report</h2>
+        <Button
+          onClick={generateReport}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <FileText className="mr-2 h-4 w-4" />
+              Generate Report
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Progress */}
+      {isGenerating && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>Generating {currentSection}...</span>
+                <span>{progress}%</span>
+              </div>
+              <Progress value={progress} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Report Content */}
+      {content && (
+        <Card>
+          <CardContent className="pt-6 prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Export Options */}
+      {!isGenerating && content && (
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export PDF
+          </Button>
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export DOCX
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Reports API" icon="code" href="/api-reference/reports">
+    API documentation
+  </Card>
+  <Card title="Report Service" icon="server" href="/backend/services/report-generation">
+    Backend implementation
+  </Card>
+</CardGroup>

@@ -1,0 +1,496 @@
+---
+title: "CRM Agent Service"
+description: "AI-powered CRM operations with natural language understanding"
+---
+
+## Overview
+
+The CRM Agent is an AI-powered service that enables natural language interactions with CRM data. It understands queries like "Show me all tech companies with revenue over $10M" and translates them into database operations.
+
+**Location**: `scripts/crm_agent.py` (51KB, 1,300+ lines)
+
+## Capabilities
+
+The CRM Agent can:
+
+- **Search & Filter**: Find companies, contacts, deals by any criteria
+- **Create Records**: Add new companies, contacts, deals from natural language
+- **Update Records**: Modify existing records based on descriptions
+- **Analytics**: Calculate metrics, trends, and insights
+- **Relationships**: Understand and query relationships between entities
+
+## Architecture
+
+### Key Components
+
+```python
+class CRMAgent:
+    """
+    AI-powered CRM operations
+
+    Uses Claude to understand natural language queries and
+    convert them to database operations
+    """
+
+    def __init__(self, supabase_client, anthropic_client):
+        self.supabase = supabase_client
+        self.claude = anthropic_client
+        self.schema_intelligence = CRMSchemaIntelligence()
+        self.name_resolver = CRMNameResolver()
+```
+
+### Dependencies
+
+- **Anthropic Claude**: Natural language understanding
+- **Supabase**: Database operations
+- **CRM Schema Intelligence**: Understanding of CRM data model
+- **Name Resolver**: Fuzzy matching for entity names
+
+## Query Processing Flow
+
+```
+1. User Query (Natural Language)
+   ↓
+2. Schema Context Injection
+   ↓
+3. Claude Analysis
+   ↓
+4. Query Plan Generation
+   ↓
+5. Database Operation Execution
+   ↓
+6. Result Formatting
+   ↓
+7. Natural Language Response
+```
+
+## Example Queries
+
+### Search Queries
+
+```python
+# Natural language input
+"Find all technology companies in San Francisco with revenue over $5M"
+
+# Generated SQL
+SELECT * FROM companies
+WHERE industry = 'Technology'
+AND location LIKE '%San Francisco%'
+AND revenue > 5000000
+```
+
+### Create Operations
+
+```python
+# Natural language input
+"Create a new company called Acme Corp in the software industry"
+
+# Generated operation
+INSERT INTO companies (name, industry, created_at)
+VALUES ('Acme Corp', 'Software', NOW())
+```
+
+### Analytics Queries
+
+```python
+# Natural language input
+"What's the average deal size for Q4 2024?"
+
+# Generated SQL
+SELECT AVG(deal_value) as avg_deal_size
+FROM deals
+WHERE created_at >= '2024-10-01'
+AND created_at < '2025-01-01'
+```
+
+### Relationship Queries
+
+```python
+# Natural language input
+"Show me all contacts at Acme Corp who are decision makers"
+
+# Generated SQL
+SELECT c.* FROM contacts c
+JOIN companies co ON c.company_id = co.id
+WHERE co.name = 'Acme Corp'
+AND c.role IN ('CEO', 'CTO', 'VP', 'Director')
+```
+
+## Schema Intelligence
+
+### CRM Schema Understanding
+
+The agent has built-in knowledge of the CRM schema:
+
+```python
+class CRMSchemaIntelligence:
+    """
+    Understanding of CRM data model
+    """
+
+    TABLES = {
+        "companies": {
+            "columns": ["id", "name", "industry", "revenue", "location", "status"],
+            "relationships": ["contacts", "deals", "files"]
+        },
+        "contacts": {
+            "columns": ["id", "name", "email", "phone", "role", "company_id"],
+            "relationships": ["company", "interactions", "deals"]
+        },
+        "deals": {
+            "columns": ["id", "name", "value", "stage", "company_id", "owner_id"],
+            "relationships": ["company", "contacts", "interactions"]
+        }
+    }
+```
+
+### Intelligent Column Mapping
+
+Maps natural language to database columns:
+
+```python
+# "revenue over 10 million" → revenue > 10000000
+# "tech companies" → industry IN ('Technology', 'Software', 'IT')
+# "recent deals" → created_at > NOW() - INTERVAL '30 days'
+```
+
+## Name Resolution
+
+### Fuzzy Matching
+
+Handles variations in entity names:
+
+```python
+class CRMNameResolver:
+    """
+    Fuzzy matching for company/contact names
+    """
+
+    def resolve_company_name(self, query: str) -> str:
+        # "acme" → "Acme Corp"
+        # "microsoft" → "Microsoft Corporation"
+        # "apple inc" → "Apple Inc."
+        pass
+```
+
+### Confidence Scoring
+
+```python
+{
+    "Acme Corp": 0.95,  # High confidence
+    "Acme Corporation": 0.85,  # Similar
+    "ACME": 0.75  # Possible match
+}
+```
+
+## API Integration
+
+### Via Prompts Router
+
+```python
+# api/app/routers/prompts.py
+
+@router.post("/crm-query")
+async def crm_query(
+    query: str,
+    user: User = Depends(get_current_user)
+):
+    """
+    Execute natural language CRM query
+    """
+    agent = CRMAgent(supabase, anthropic)
+    result = await agent.execute_query(query, user.firm_id)
+    return result
+```
+
+### Request/Response
+
+**Request**:
+```bash
+POST /api/prompts/crm-query
+Authorization: Bearer TOKEN
+
+{
+  "query": "Show me all deals in the pipeline stage worth over $100k"
+}
+```
+
+**Response**:
+```json
+{
+  "query": "Show me all deals...",
+  "sql": "SELECT * FROM deals WHERE stage = 'pipeline' AND value > 100000",
+  "results": [
+    {
+      "id": "uuid-1",
+      "name": "Enterprise Deal - Acme Corp",
+      "value": 250000,
+      "stage": "pipeline"
+    },
+    {
+      "id": "uuid-2",
+      "name": "Strategic Partnership",
+      "value": 150000,
+      "stage": "pipeline"
+    }
+  ],
+  "summary": "Found 2 deals in pipeline stage worth over $100k, totaling $400k"
+}
+```
+
+## Advanced Features
+
+### Multi-step Queries
+
+Handles complex queries requiring multiple operations:
+
+```python
+# "Find all companies in healthcare, then show their active deals"
+# Step 1: Query companies
+# Step 2: Query deals for those companies
+# Step 3: Aggregate results
+```
+
+### Context Awareness
+
+Maintains context across queries:
+
+```python
+# Query 1: "Show me tech companies"
+# Query 2: "Which ones have revenue over $10M?"
+# (Refers back to tech companies from Query 1)
+```
+
+### Data Validation
+
+Validates operations before execution:
+
+```python
+# Before creating company
+- Check for duplicates
+- Validate required fields
+- Ensure firm_id is set
+- Check permissions
+```
+
+## Error Handling
+
+### Graceful Degradation
+
+```python
+try:
+    result = agent.execute_query(query)
+except SchemaError:
+    return "I couldn't understand that query. Could you rephrase?"
+except PermissionError:
+    return "You don't have permission to access that data."
+except DatabaseError:
+    return "There was an error accessing the database."
+```
+
+### Query Clarification
+
+```python
+# Ambiguous query
+"Show me deals"
+
+# Agent response
+"I found multiple interpretations:
+1. All deals in your CRM
+2. Active deals only
+3. Recent deals (last 30 days)
+
+Which would you like to see?"
+```
+
+## Performance Optimization
+
+### Query Caching
+
+```python
+# Cache frequent queries
+cache_key = hash(query + firm_id)
+if cache_key in query_cache:
+    return cached_result
+```
+
+### Schema Caching
+
+```python
+# Load schema once at startup
+schema = load_crm_schema()  # Cached
+```
+
+### Batch Operations
+
+```python
+# Instead of N queries
+for company in companies:
+    get_deals(company.id)
+
+# Use batch query
+get_deals_batch([c.id for c in companies])
+```
+
+## Security
+
+### Firm-Level Isolation
+
+All queries automatically filter by firm:
+
+```python
+# User query: "Show all companies"
+# Actual SQL: SELECT * FROM companies WHERE firm_id = user.firm_id
+```
+
+### Permission Checks
+
+```python
+def check_permissions(user, operation, entity):
+    if operation == "create" and user.role != "admin":
+        raise PermissionError("Only admins can create companies")
+```
+
+### SQL Injection Prevention
+
+Uses parameterized queries:
+
+```python
+# ✅ Safe - Parameterized
+cursor.execute("SELECT * FROM companies WHERE name = %s", (company_name,))
+
+# ❌ Unsafe - String interpolation
+cursor.execute(f"SELECT * FROM companies WHERE name = '{company_name}'")
+```
+
+## Usage Examples
+
+### From Frontend
+
+```typescript
+// services/crm-api.ts
+export async function queryCRM(query: string) {
+  const response = await fetch('/api/prompts/crm-query', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query })
+  })
+
+  return response.json()
+}
+
+// Usage in component
+const handleQuery = async () => {
+  const result = await queryCRM("Show me all tech companies")
+  setCompanies(result.results)
+}
+```
+
+### From Python Scripts
+
+```python
+from scripts.crm_agent import CRMAgent
+
+agent = CRMAgent(supabase, anthropic)
+
+# Execute query
+result = agent.execute_query(
+    "Find all companies with revenue over $5M",
+    firm_id="uuid"
+)
+
+print(result['summary'])
+print(result['results'])
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Required
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+SUPABASE_URL=https://project.supabase.co
+SUPABASE_KEY=your-key
+
+# Optional
+CRM_AGENT_CACHE_TTL=3600  # Cache TTL in seconds
+CRM_AGENT_MAX_RESULTS=100  # Max results per query
+```
+
+## Monitoring
+
+### Logging
+
+```python
+import logging
+
+logger.info(f"CRM Query: {query}")
+logger.info(f"Generated SQL: {sql}")
+logger.info(f"Results: {len(results)} records")
+logger.info(f"Execution time: {elapsed}s")
+```
+
+### Metrics
+
+Track key metrics:
+- Query success rate
+- Average execution time
+- Cache hit rate
+- Error rate by type
+
+## Future Enhancements
+
+<AccordionGroup>
+  <Accordion title="Natural Language Updates">
+    Support for "Change Acme Corp's status to active"
+  </Accordion>
+
+  <Accordion title="Bulk Operations">
+    "Archive all companies with no activity in 6 months"
+  </Accordion>
+
+  <Accordion title="Advanced Analytics">
+    "Compare Q4 2024 revenue to Q4 2023 by industry"
+  </Accordion>
+
+  <Accordion title="Voice Interface">
+    Voice-to-text query input for hands-free CRM
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Agent returns unclear results">
+    **Solution**: Rephrase query to be more specific, use exact column names
+  </Accordion>
+
+  <Accordion title="Slow query execution">
+    **Solution**: Check database indexes, use filters to reduce result set
+  </Accordion>
+
+  <Accordion title="Permission errors">
+    **Solution**: Verify user role and firm_id, check RLS policies
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agentic Chat" icon="messages" href="/backend/services/agentic-chat">
+    Multi-agent system with CRM agent integration
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/companies">
+    Direct CRM API endpoints
+  </Card>
+  <Card title="Database Schema" icon="database" href="/backend/database/schema">
+    Understanding the CRM data model
+  </Card>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    Complete backend architecture
+  </Card>
+</CardGroup>

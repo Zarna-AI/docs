@@ -1,0 +1,197 @@
+---
+title: "Backend Tech Stack"
+description: "Complete breakdown of backend technologies and services"
+---
+
+## Core Technologies
+
+### FastAPI
+
+Modern, high-performance Python web framework.
+
+**Why FastAPI**:
+- Automatic OpenAPI documentation
+- Built-in validation with Pydantic
+- Async/await support
+- High performance (comparable to Node.js)
+- Type hints throughout
+
+### Python 3.8+
+
+Language runtime with extensive library ecosystem.
+
+### Uvicorn
+
+ASGI server for production deployment.
+
+```python
+import uvicorn
+
+uvicorn.run(
+    "app.main:app",
+    host="0.0.0.0",
+    port=8000,
+    reload=True  # Development only
+)
+```
+
+## AI & ML Libraries
+
+<AccordionGroup>
+  <Accordion title="Anthropic SDK">
+    **Purpose**: Claude AI integration
+
+    **Models Used**:
+    - claude-3-opus (highest quality)
+    - claude-3-sonnet (balanced)
+    - claude-3-haiku (fast)
+
+    **Use Cases**: Report generation, document analysis, CRM queries
+  </Accordion>
+
+  <Accordion title="OpenAI SDK">
+    **Purpose**: Alternative AI provider
+
+    **Models**: GPT-4, GPT-3.5-turbo
+
+    **Use Cases**: Embeddings, fallback AI
+  </Accordion>
+
+  <Accordion title="AutoGen">
+    **Purpose**: Multi-agent orchestration
+
+    **Features**: Agent teams, tool use, conversation management
+  </Accordion>
+
+  <Accordion title="Transformers">
+    **Purpose**: Local model inference
+
+    **Use Cases**: Embeddings, classification
+  </Accordion>
+</AccordionGroup>
+
+## Document Processing
+
+<AccordionGroup>
+  <Accordion title="Docling">
+    **Purpose**: Primary document extraction
+
+    **Supports**: PDF, DOCX, PPTX, HTML
+    **Features**: Layout analysis, table extraction, image extraction
+  </Accordion>
+
+  <Accordion title="PDFPlumber">
+    **Purpose**: PDF text and table extraction
+
+    **Advantages**: Better table detection than PyPDF2
+  </Accordion>
+
+  <Accordion title="EasyOCR">
+    **Purpose**: Optical Character Recognition
+
+    **Languages**: 80+
+    **Features**: GPU support, high accuracy
+  </Accordion>
+</AccordionGroup>
+
+## Database & Storage
+
+<AccordionGroup>
+  <Accordion title="Supabase Client">
+    **Purpose**: PostgreSQL database access
+
+    **Features**:
+    - Database queries
+    - Auth management
+    - File storage
+    - Real-time subscriptions
+  </Accordion>
+
+  <Accordion title="SQLAlchemy (Optional)">
+    **Purpose**: ORM for complex queries
+
+    **Use Cases**: Advanced joins, aggregations
+  </Accordion>
+</AccordionGroup>
+
+## External Integrations
+
+<AccordionGroup>
+  <Accordion title="Composio SDK">
+    **Purpose**: Unified OAuth and API access
+
+    **Integrations**: Gmail, Outlook, Drive, Calendar, 100+ more
+  </Accordion>
+
+  <Accordion title="Exa SDK">
+    **Purpose**: AI-powered web search
+
+    **Use Case**: Company sourcing and research
+  </Accordion>
+</AccordionGroup>
+
+## Data Processing
+
+<AccordionGroup>
+  <Accordion title="Pandas">
+    **Purpose**: Data manipulation and analysis
+
+    **Use Cases**: Excel processing, data transformation
+  </Accordion>
+
+  <Accordion title="NumPy">
+    **Purpose**: Numerical computations
+
+    **Use Cases**: Financial calculations, analytics
+  </Accordion>
+</AccordionGroup>
+
+## Development Tools
+
+- **Black**: Code formatting
+- **pytest**: Testing framework
+- **mypy**: Type checking
+- **pylint**: Code linting
+
+## Dependencies
+
+**Total**: 145+ Python packages in `requirements.txt`
+
+**Key Packages**:
+```txt
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.0
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.6
+supabase==2.3.0
+anthropic==0.8.0
+openai==1.6.0
+autogen==0.2.0
+docling==1.0.0
+easyocr==1.7.0
+pdfplumber==0.10.0
+pandas==2.1.0
+numpy==1.24.0
+```
+
+## Performance
+
+- **Requests/sec**: 1,000+ on single instance
+- **Async I/O**: Non-blocking operations
+- **Connection pooling**: Reuse database connections
+- **Agent pools**: Eliminate 5-11s cold start
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Backend Overview" icon="server" href="/backend/overview">
+    Architecture overview
+  </Card>
+  <Card title="Services" icon="cog" href="/backend/services/crm-agent">
+    Core services
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    API endpoints
+  </Card>
+</CardGroup>

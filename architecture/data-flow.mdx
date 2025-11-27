@@ -1,0 +1,476 @@
+---
+title: "Data Flow"
+description: "Request/response lifecycle and data movement patterns"
+---
+
+## Request Lifecycle
+
+### Complete Flow
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     1. USER INTERACTION                      │
+│                                                              │
+│  User clicks "Create Company" button in React UI            │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  2. FRONTEND REQUEST ASSEMBLY                │
+│                                                              │
+│  • Event handler triggered                                  │
+│  • Form data validated (Zod schema)                         │
+│  • API service function called                              │
+│  • JWT token retrieved from AuthContext                     │
+│  • HTTP request built with headers                          │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓ POST /api/companies
+                             ↓ Authorization: Bearer {JWT}
+                             ↓ Content-Type: application/json
+                             ↓ Body: {"name": "Acme", ...}
+┌──────────────────────────────────────────────────────────────┐
+│                   3. NETWORK TRANSMISSION                    │
+│                                                              │
+│  • HTTPS request over network                               │
+│  • TLS encryption applied                                   │
+│  • Request reaches backend at :8000                         │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  4. BACKEND MIDDLEWARE CHAIN                 │
+│                                                              │
+│  Step 1: CORS Middleware                                    │
+│    • Validate origin (localhost:3000)                       │
+│    • Add CORS headers                                       │
+│    • Continue if allowed                                    │
+│                                                              │
+│  Step 2: JWT Auth Middleware                                │
+│    • Extract Authorization header                           │
+│    • Decode JWT token                                       │
+│    • Verify signature with SUPABASE_JWT_SECRET              │
+│    • Check expiration (24h)                                 │
+│    • Extract user_id, firm_id, email                        │
+│    • Attach to request.state                                │
+│    • Continue if valid, else 401                            │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                    5. ROUTER LAYER                           │
+│                                                              │
+│  • FastAPI routes request to companies.py router            │
+│  • Pydantic validates request body against CompanyCreate    │
+│  • Validation passes → continue                             │
+│  • Validation fails → 422 Unprocessable Entity              │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                   6. BUSINESS LOGIC LAYER                    │
+│                                                              │
+│  @router.post("/companies")                                 │
+│  async def create_company(                                  │
+│      company: CompanyCreate,                                │
+│      request: Request                                       │
+│  ):                                                         │
+│      firm_id = request.state.firm_id                        │
+│      user_id = request.state.user_id                        │
+│                                                             │
+│      # Add firm_id to company data                          │
+│      company_data = company.dict()                          │
+│      company_data['firm_id'] = firm_id                      │
+│      company_data['created_by'] = user_id                   │
+│                                                             │
+│      # Call database                                        │
+│      result = await db.create_company(company_data)         │
+│                                                             │
+│      return result                                          │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                   7. DATABASE LAYER                          │
+│                                                              │
+│  • Supabase client executes INSERT                          │
+│  • RLS policy checks firm_id matches user's firm            │
+│  • Data inserted into companies table                       │
+│  • PostgreSQL triggers fire (updated_at, etc.)              │
+│  • Returns inserted record                                  │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  8. RESPONSE ASSEMBLY                        │
+│                                                              │
+│  • Service formats response data                            │
+│  • Router returns JSON                                      │
+│  • Middleware adds headers                                  │
+│    - Content-Type: application/json                         │
+│    - X-Request-ID: unique-id                                │
+│    - Access-Control-Allow-Origin: *                         │
+│  • Status code: 201 Created                                 │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓ HTTP 201 Created
+                             ↓ Response body: {"id": "...", "name": "Acme"}
+┌──────────────────────────────────────────────────────────────┐
+│                  9. FRONTEND RECEIVES RESPONSE               │
+│                                                              │
+│  • Fetch promise resolves                                   │
+│  • Response parsed as JSON                                  │
+│  • Data returned to event handler                           │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                   10. UI UPDATE                              │
+│                                                              │
+│  • React state updated with new company                     │
+│  • Component re-renders                                     │
+│  • New company appears in list                              │
+│  • Success toast displayed                                  │
+│  • Form reset to initial state                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Total Time**: ~200-500ms for typical CRUD operation
+
+## Document Processing Flow
+
+### Upload to Analysis
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  1. FILE UPLOAD (Frontend)                   │
+│                                                              │
+│  • User selects PDF file                                    │
+│  • File wrapped in FormData                                 │
+│  • POST /api/files/upload with multipart/form-data         │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  2. FILE STORAGE (Backend)                   │
+│                                                              │
+│  • Save file to temp directory                              │
+│  • Generate unique filename                                 │
+│  • Upload to Supabase Storage                               │
+│  • Create file record in database                           │
+│    - status: 'pending'                                      │
+│    - processing_progress: 0                                 │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│              3. PROCESSING JOB QUEUED                        │
+│                                                              │
+│  • Background task created                                  │
+│  • Added to processing queue                                │
+│  • Immediate response to frontend:                          │
+│    {"status": "processing", "file_id": "..."}               │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│               4. DOCLING EXTRACTION                          │
+│                                                              │
+│  • Docling processes PDF                                    │
+│  • Extract text content                                     │
+│  • Extract tables with structure                            │
+│  • Extract embedded images                                  │
+│  • Extract metadata (author, date, etc.)                    │
+│  • Update progress: 30%                                     │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  5. OCR (If Needed)                          │
+│                                                              │
+│  • Check if document is scanned                             │
+│  • Run EasyOCR on image pages                               │
+│  • Merge OCR text with Docling results                      │
+│  • Update progress: 60%                                     │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  6. AI ANALYSIS (Claude)                     │
+│                                                              │
+│  • Send extracted content to Claude                         │
+│  • Identify document type (CIM, financial, etc.)            │
+│  • Extract structured data:                                 │
+│    - Company name, industry                                 │
+│    - Financial metrics                                      │
+│    - Key people                                             │
+│    - Deal information                                       │
+│  • Generate summary                                         │
+│  • Update progress: 90%                                     │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│              7. DATABASE UPDATE                              │
+│                                                              │
+│  • Save extracted_data as JSONB                             │
+│  • Update processing_status: 'completed'                    │
+│  • Update progress: 100                                     │
+│  • Set processed_at timestamp                               │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│              8. FRONTEND NOTIFICATION                        │
+│                                                              │
+│  • WebSocket notification (real-time)                       │
+│    OR                                                       │
+│  • Frontend polls /api/files/{id}/status                    │
+│  • UI shows "Processing complete"                           │
+│  • Extracted data displayed                                 │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Total Time**: 10-60 seconds depending on document size and complexity
+
+## AI Report Generation Flow
+
+### Streaming Pipeline
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│               1. REPORT REQUEST                              │
+│                                                              │
+│  POST /api/reports/generate                                 │
+│  {company_id, report_type, sections}                        │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│               2. DATA COLLECTION                             │
+│                                                              │
+│  • Query company data                                       │
+│  • Query related contacts                                   │
+│  • Query deals and pipeline                                 │
+│  • Query financial records                                  │
+│  • Query uploaded documents                                 │
+│  • Parallel queries for performance                         │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│           3. AGENT POOL ASSIGNMENT                           │
+│                                                              │
+│  • AgentPoolManager.get_pool(firm_id)                       │
+│  • Assign query to available warm agent                     │
+│  • No cold start (agents pre-initialized)                   │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│            4. MULTI-AGENT EXECUTION                          │
+│                                                              │
+│  Agents work in parallel:                                   │
+│                                                              │
+│  • Data Retrieval Agent                                     │
+│    └─> Formats data for analysis                            │
+│                                                              │
+│  • Analysis Agent                                           │
+│    └─> Calculates metrics and trends                        │
+│                                                              │
+│  • Web Search Agent (if needed)                             │
+│    └─> Gathers market intelligence                          │
+│                                                              │
+│  • Report Writer Agent                                      │
+│    └─> Synthesizes into report                              │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│          5. STREAMING RESPONSE (SSE)                         │
+│                                                              │
+│  data: {"type": "start"}                                    │
+│  data: {"type": "chunk", "content": "# Company Overview"} │
+│  data: {"type": "chunk", "content": "\n\nAcme Corp..."}    │
+│  data: {"type": "section_complete", "section": "overview"}  │
+│  data: {"type": "chunk", "content": "# Financials..."}     │
+│  data: {"type": "complete", "total_time": 12.5}            │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│           6. FRONTEND STREAMING HANDLER                      │
+│                                                              │
+│  • ReadableStream reader                                    │
+│  • Parse SSE events                                         │
+│  • Append chunks to report content                          │
+│  • Update UI in real-time                                   │
+│  • Show progress indicator                                  │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│              7. REPORT STORAGE                               │
+│                                                              │
+│  • Save complete report to database                         │
+│  • Store as markdown + JSON metadata                        │
+│  • Generate PDF version (optional)                          │
+│  • Create download link                                     │
+└────────────────────────────┬─────────────────────────────────┘
+                             │
+                             ↓
+┌──────────────────────────────────────────────────────────────┐
+│              8. UI COMPLETION                                │
+│                                                              │
+│  • Show "Report complete" message                           │
+│  • Display download button                                  │
+│  • Enable export options (PDF, DOCX)                        │
+│  • Update reports list                                      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Total Time**: 10-15 seconds with agent pool
+
+## Data Synchronization
+
+### Real-time Updates
+
+```
+┌────────────┐         ┌────────────┐         ┌────────────┐
+│  User A    │         │  Backend   │         │  User B    │
+│  Browser   │         │  Server    │         │  Browser   │
+└──────┬─────┘         └─────┬──────┘         └─────┬──────┘
+       │                     │                      │
+       │  Create Company     │                      │
+       ├────────────────────>│                      │
+       │                     │                      │
+       │                     │  Insert DB           │
+       │                     ├──────────>           │
+       │                     │                      │
+       │                     │  WebSocket Notify    │
+       │                     ├─────────────────────>│
+       │                     │                      │
+       │  201 Created        │                      │
+       │<────────────────────┤                      │
+       │                     │                      │
+       │  Update UI          │     Update UI        │
+       │  (new company)      │     (new company)    │
+       │                     │                      │
+```
+
+## OAuth Integration Flow
+
+See complete OAuth flow in [Authentication Flow](/architecture/authentication-flow#oauth-2-0-flow-gmail-outlook)
+
+## Batch Operations
+
+### Efficient Bulk Processing
+
+```
+Single Requests (Inefficient):
+POST /api/companies (x100)
+├─> 100 HTTP requests
+├─> 100 JWT validations
+├─> 100 database connections
+└─> Total time: ~10-30 seconds
+
+Batch Request (Efficient):
+POST /api/companies/batch
+├─> 1 HTTP request
+├─> 1 JWT validation
+├─> 1 database transaction
+└─> Total time: ~1-2 seconds
+```
+
+## Caching Strategy
+
+### Multi-Level Caching
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Level 1: Browser Cache                   │
+│  • Static assets (images, fonts, etc.)                     │
+│  • Service worker cache (future)                           │
+│  • TTL: 1 year for immutable assets                        │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────┐
+│                   Level 2: API Response Cache               │
+│  • Redis cache (future implementation)                     │
+│  • Cache GET requests for companies, contacts              │
+│  • Invalidate on POST/PATCH/DELETE                         │
+│  • TTL: 5 minutes                                          │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────┐
+│                   Level 3: Query Result Cache               │
+│  • Database query results                                  │
+│  • Materialized views for aggregations                     │
+│  • Refresh: Every hour or on-demand                        │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────┐
+│                   Level 4: Connection Pool                  │
+│  • Supabase connection pooling                             │
+│  • Reuse database connections                              │
+│  • Max connections: 100                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Error Propagation
+
+```
+Backend Error → Frontend Handling
+
+┌────────────┐
+│  Database  │
+│  Error     │
+└──────┬─────┘
+       │
+       ↓  Throw HTTPException(500)
+┌────────────┐
+│  Router    │
+│  Catches   │
+└──────┬─────┘
+       │
+       ↓  Exception Handler
+┌────────────┐
+│  Middleware│
+│  Formats   │
+└──────┬─────┘
+       │
+       ↓  {"detail": "Database error"}
+┌────────────┐
+│  HTTP 500  │
+│  Response  │
+└──────┬─────┘
+       │
+       ↓  fetch catches error
+┌────────────┐
+│  Frontend  │
+│  try/catch │
+└──────┬─────┘
+       │
+       ↓  Show error toast
+┌────────────┐
+│  User sees │
+│  error UI  │
+└────────────┘
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="System Overview" icon="diagram-project" href="/architecture/system-overview">
+    Complete system architecture
+  </Card>
+  <Card title="Authentication Flow" icon="key" href="/architecture/authentication-flow">
+    JWT and OAuth flows
+  </Card>
+  <Card title="Agent Pool" icon="bolt" href="/architecture/agent-pool">
+    Performance optimization
+  </Card>
+  <Card title="File Processing" icon="file" href="/architecture/file-processing">
+    Document processing pipeline
+  </Card>
+</CardGroup>
