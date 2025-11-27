@@ -220,8 +220,8 @@
     }
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/zarna_dark.png",
+    "dark": "/logo/zarna_dark.png"
   },
   "navbar": {
     "links": [
