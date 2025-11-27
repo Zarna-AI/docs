@@ -208,7 +208,7 @@
       "anchors": [
         {
           "anchor": "API Reference",
-          "href": "/api-reference/introduction",
+          "href": "https://zarna.mintlify.app/api-reference/introduction",
           "icon": "code"
         },
         {
